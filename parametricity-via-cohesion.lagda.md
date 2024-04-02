@@ -26,29 +26,142 @@ As a first step toward the unification, simplification, and generalization of th
 ```agda
 {-# OPTIONS --rewriting --cohesion --flat-split --without-K #-}
 module parametricity-via-cohesion where
+    
+open import Agda.Primitive
+open import Agda.Builtin.Sigma
+open import Agda.Builtin.Equality
+open import Agda.Builtin.Equality.Rewrite
 ```
 
 # Cohesion and Parametricity
 
-The notion of *cohesion* as an abstract characterization of when one category (specifically a topos) behaves like a category of spaces defined over the objects of another, is due primarily to Lawvere. The central concept of axiomatic cohesion is an arrangement of four adjoint functors as in the following diagram:
-
-<!-- https://q.uiver.app/#q=WzAsMixbMCwwLCJcXG1hdGhjYWx7RX0iXSxbMCwxLCJcXG1hdGhjYWx7U30iXSxbMCwxLCJcXEdhbW1hIiwxLHsiY3VydmUiOi0xfV0sWzEsMCwiXFxuYWJsYSIsMSx7ImN1cnZlIjozfV0sWzEsMCwiXFxEZWx0YSIsMSx7ImN1cnZlIjotMX1dLFswLDEsIlxcUGkiLDEseyJjdXJ2ZSI6M31dLFs1LDQsIiIsMSx7ImxldmVsIjoxLCJzdHlsZSI6eyJuYW1lIjoiYWRqdW5jdGlvbiJ9fV0sWzQsMiwiIiwxLHsibGV2ZWwiOjEsInN0eWxlIjp7Im5hbWUiOiJhZGp1bmN0aW9uIn19XSxbMiwzLCIiLDEseyJsZXZlbCI6MSwic3R5bGUiOnsibmFtZSI6ImFkanVuY3Rpb24ifX1dXQ== -->
-<iframe class="quiver-embed" src="https://q.uiver.app/#q=WzAsMixbMCwwLCJcXG1hdGhjYWx7RX0iXSxbMCwxLCJcXG1hdGhjYWx7U30iXSxbMCwxLCJcXEdhbW1hIiwxLHsiY3VydmUiOi0xfV0sWzEsMCwiXFxuYWJsYSIsMSx7ImN1cnZlIjozfV0sWzEsMCwiXFxEZWx0YSIsMSx7ImN1cnZlIjotMX1dLFswLDEsIlxcUGkiLDEseyJjdXJ2ZSI6M31dLFs1LDQsIiIsMSx7ImxldmVsIjoxLCJzdHlsZSI6eyJuYW1lIjoiYWRqdW5jdGlvbiJ9fV0sWzQsMiwiIiwxLHsibGV2ZWwiOjEsInN0eWxlIjp7Im5hbWUiOiJhZGp1bmN0aW9uIn19XSxbMiwzLCIiLDEseyJsZXZlbCI6MSwic3R5bGUiOnsibmFtZSI6ImFkanVuY3Rpb24ifX1dXQ==&embed" width="176" height="304" style="border-radius: 8px; border: none;"></iframe>
-
-where $\mathcal{E,S}$ are both topoi, $\Delta, \nabla$ are both fully faithful, and $\Pi$ preserves finite products. Given such an arrangement, we think of the objects of $\mathcal{E}$ as *spaces* and those of $\mathcal{S}$ as *sets* (even if $\mathcal{S}$ is not the category of sets), where $\Gamma$ is the functor that sends a space to its set of points, $\Delta$ sends a set to the corresponding *discrete space*, $\nabla$ sends a set to the corresponding *codiscrete space*, and $\Pi$ sends a space to its set of connected components. These in turn induce a string of adjoint modalities on $\mathcal{E}$: $$
+The notion of *cohesion* as an abstract characterization of when one category (specifically a topos) behaves like a category of spaces defined over the objects of another, is due primarily to Lawvere. The central concept of axiomatic cohesion is an arrangement of four adjoint functors as in the following diagram:$$
+\begin{tikzcd}
+	{\mathcal{E}} \\
+	\\
+	{\mathcal{S}}
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\Gamma"{description}, curve={height=-12pt}, from=1-1, to=3-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "\nabla"{description}, curve={height=30pt}, from=3-1, to=1-1]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "\Delta"{description}, curve={height=-12pt}, from=3-1, to=1-1]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "\Pi"{description}, curve={height=30pt}, from=1-1, to=3-1]
+	\arrow["\dashv"{anchor=center}, draw=none, from=3, to=2]
+	\arrow["\dashv"{anchor=center}, draw=none, from=2, to=0]
+	\arrow["\dashv"{anchor=center}, draw=none, from=0, to=1]
+\end{tikzcd}
+$$ where $\mathcal{E,S}$ are both topoi, $\Delta, \nabla$ are both fully faithful, and $\Pi$ preserves finite products. Given such an arrangement, we think of the objects of $\mathcal{E}$ as *spaces* and those of $\mathcal{S}$ as *sets* (even if $\mathcal{S}$ is not the category of sets), where $\Gamma$ is the functor that sends a space to its set of points, $\Delta$ sends a set to the corresponding *discrete space*, $\nabla$ sends a set to the corresponding *codiscrete space*, and $\Pi$ sends a space to its set of connected components. These in turn induce a string of adjoint modalities on $\mathcal{E}$: $$
 \smallint \dashv \flat \dashv \sharp 
 $$ where $\smallint = \Delta \circ \Pi$ and $\sharp = \nabla \circ \Gamma$ are idempotent monads, $\flat = \Delta \circ \Gamma$ is an idempotent comonad, and both $\flat$ and $\sharp$ preserve finite limits.
 
-A concrete example of cohesion comes from the category of reflexive graphs $\mathbf{RGph}$, which is cohesive over the category of sets $\mathbf{Set}$. Here, $\Gamma$ is the functor that sends a reflexive graph to its set of vertices, $\Delta$ sends a set $V$ to the "discrete" reflexive graph on $V$ whose only edges are self-loops, $\nabla$ sends $V$ to the "codiscrete" graph where there is a unique edge between any pair of vertices, and $\Pi$ sends a reflexive graph to its set of (weakly) connected components. It is worth noting, at this point, that many classical models of parametricity are based upon semantic interpretations of types as reflexive graphs, and this, I wish to argue is no accident, and the key property of reflexive graphs underlying such interpretations is precisely their cohesive structure. 
+A concrete example of cohesion comes from the category of reflexive graphs $\mathbf{RGph}$, which is cohesive over the category of sets $\mathbf{Set}$. Here, $\Gamma$ is the functor that sends a reflexive graph to its set of vertices, $\Delta$ sends a set $V$ to the "discrete" reflexive graph on $V$ whose only edges are self-loops, $\nabla$ sends $V$ to the "codiscrete" graph where there is a unique edge between any pair of vertices, and $\Pi$ sends a reflexive graph to its set of (weakly) connected components. It is worth noting, at this point, that many classical models of parametricity are based upon semantic interpretations of types as reflexive graphs, and this, I wish to argue is no accident, and the key property of reflexive graphs underlying such interpretations is precisely their cohesive structure.[^1] More generally, for any base topos $\mathcal{S}$, we may construct its corresponding topos $\mathbf{RGph}(\mathcal{S})$ of *internal reflexive graphs*, which will similarly be cohesive over $\mathcal{S}$, so we can in fact use the language of such internal reflexive graphs to derive parametricity results for *any* topos (or indeed, any $\infty$-topos, as described below).
 
-Similarly, the category of bicubical sets is cohesive over that of cubical sets, a fact exploited by Nuyts, Devriese & Vezzossi in the semantics for their type theory for parametric quantifiers. 
+[^1]: Similarly, the category of bicubical sets is cohesive over that of cubical sets, a fact exploited by Nuyts, Devriese & Vezzossi in the semantics for their type theory for parametric quantifiers. 
 
-More generally, for any base topos $\mathcal{S}$, we may construct its corresponding topos $\mathbf{RGph}(\mathcal{S})$ of *internal reflexive graphs*, which will similarly be cohesive over $\mathcal{S}$, so we can in fact use the language of such internal reflexive graphs to derive parametricity results for *any* topos (or indeed, any $\infty$-topos).
+In fact, this same setup of cohesion is interpretable, *mutatis mutandis*, in the case where $\mathcal{E,S}$ are not topoi, but rather *$\infty$-topoi*, i.e. models of homotopy type theory. This allows us to use the language of homotopy type theory -- suitably extended with constructs for the above-described modalities (the $\flat$ modality in particular, which, for technical reasons, cannot be axiomatized directly in ordinary HoTT) -- to work *synthetically* with the structure of such a cohesive $\infty$-topos. For present purposes, we accomplish this by working in Agda with the `--cohesion` and `--flat-split` flags enabled, along with `--without-K`, which ensures compatibility with the treatment of propositional equality in HoTT.
 
-Returning to the general setting of abstract cohesion, then, an object $A \in \mathcal{E}$ is called *discrete* if the counit map $\epsilon_A : \flat A \to A \in \mathcal{E}$ is an isomorphism.
+I therefore begin by recalling some standard definitions from HoTT, which shall be essential in defining much of the structure to follow. Essentially all of these definitions have to do with the *identity type* former `_≡_` and its associated constructor `refl : ∀ {ℓ} {A : Set ℓ} {a : A} → a ≡ a`, as defined in the module `Agda.Builtin.Equality`:
+```agda
+module hott where
+```
+First of all, we have the operation of *transport*, which embodies the principle of *indiscernability of identicals* (i.e. if `a0 = a1` and `B a1` then `B a0`):
+```agda
+    transp : ∀ {ℓ κ} {A : Set ℓ} {a0 a1 : A} 
+             → (B : A → Set κ) → (a0 ≡ a1) → B a1 → B a0
+    transp B refl b = b
+```
 
-# Axioms for Modal Parametricity
+The notion of *contractibility* then expresses the idea that a type is essentially uniquely inhabited.
+```agda
+    isContr : ∀ {ℓ} (A : Set ℓ) → Set ℓ
+    isContr A = Σ A (λ a → (b : A) → a ≡ b)
+```
+Similarly, the notion of a type being a *proposition* expresses the idea that the type essentially has *at most one* inhabitant.
+```agda
+    isProp : ∀ {ℓ} (A : Set ℓ) → Set ℓ
+    isProp A = (a b : A) → a ≡ b
+```
+Finally, the notion of *equivalence* expresses the idea that a function between types has an *essentially unique* inverse. (Those familiar with HoTT may note that I use the *contractible fibres* definition of equivalence, as this shall be the most convenient to work with, for present purposes).
+```agda
+    isEquiv : ∀ {ℓ κ} {A : Set ℓ} {B : Set κ} 
+              → (A → B) → Set (ℓ ⊔ κ)
+    isEquiv {A = A} {B = B} f = 
+        (b : B) → isContr (Σ A (λ a → f a ≡ b))
 
-# Applications of Modal Parametricity
+    mkInv : ∀ {ℓ κ} {A : Set ℓ} {B : Set κ}
+            → (f : A → B) → isEquiv f → B → A
+    mkInv f e b = fst (fst (e b))
+
+open hott
+```
+
+The reader familiar with HoTT may note that, so far, we have not included anything related to the characteristic axiom of HoTT, namely Voevodsky's *univalence axiom*. In fact, this is by design, as this axiom is largely unneeded in what follows, save for an incidental lemma to prove admissibility of another axiom. I thus postulate univalence in a separate module, which will only be used in this latter proof:
+
+```agda
+module univalence where
+```
+To state univalence, we first define the operation that takes an identity to an equivalence between types:
+
+```agda
+    idToEquiv : ∀ {ℓ} (A B : Set ℓ)
+                → A ≡ B → Σ (A → B) (λ f → isEquiv f)
+    idToEquiv A B refl =
+        ((λ a → a) , λ b → ((b , refl) , λ {(c , refl) → refl}))
+```
+
+The univalence axiom asserts that this map is itself an equivalence:
+
+```agda
+    postulate
+        axiom : ∀ {ℓ} {A B : Set ℓ} → isEquiv (idToEquiv A B)
+```
+
+Having defined some essential structures of the language of HoTT, we may now proceed to similarly define some essential structures of the language of HoTT *with cohesive modalities*. 
+```agda
+module cohesion where
+```
+Of principal importance here is the $\flat$ modality, which (intuitively) takes a type $A$ to its corresponding *discretization* $\flat A$, wherein all cohesion between points has been eliminated. However, in order for this operation to be well-behaved, $A$ must not depend upon any variables whose types are not themselves *discrete*, in this sense. To solve this problem, the `--cohesion` flag introduces a new form of variable binding `@♭ x : X`, which metatheoretically asserts that $x$ is an element of the discretization of $X$. In this case, we say that $x$ is a *crisp* element of $X$.
+
+With this notion in hand, we can define the $\flat$ modality as an operation on *crisp* types:
+
+```agda
+    data ♭ {@♭ ℓ : Level} (@♭ A : Set ℓ) : Set ℓ where
+        con : (@♭ x : A) → ♭ A
+```
+
+As expected, the $\flat$ modality is a comonad with the following counit operation $\epsilon$:
+
+```agda
+    ε : {@♭ l : Level} {@♭ A : Set l} → ♭ A → A
+    ε (con x) = x
+```
+
+A crisp type is then *discrete* precisely when this map is an equivalence:
+
+```agda
+    isDiscrete : ∀ {@♭ ℓ : Level} → (@♭ A : Set ℓ) → Set ℓ
+    isDiscrete {ℓ = ℓ} A = isEquiv (ε {ℓ} {A})
+
+open cohesion
+```
+
+Perhaps surprisingly, with these few definitions alone, we are already nearly in a position to derive parametricity theorems in Agda (and more generally, in any type theory supporting the above constructions). What more is needed is merely a way of detecting when the elements of a given type are *related,* or somehow bound together, by the cohesive structure of that type.
+
+For this purpose, it is useful to take a geometric perspective upon cohesion, and correspondingly, parametricity. What we are after is essentially the *shape* of an abstract relation between points, and an object $I$ in our cohesive topos $\mathcal{E}$ (correspondingly, a type in our type theory) which *classifies* this shape in other objects (types) in that maps $I → A$ correspond to such abstract relations between points in $A$. For this purpose, I propose that the *shape* of an abstract relation is nothing other than a *line segment,* i.e. two distinct points which are somehow *connected*. By way of concrete example, in the topos of reflexive graphs $\mathbf{RGph}$, the role of a classifier for this shape is played by the "walking edge" graph $\bullet → \bullet$, consisting of two points and a single non-identity (directed) edge. More generally, using the language of cohesion, we can capture this notion of an abstract line segment in the following axiomatic characterization of $I$:
+
+> $I$ is an object of $\mathcal{E}$ that is *strictly bipointed* and *connected*.
+
+Unpacking the terms used in this characterization, we have the following:
+
+* *Strictly bipointed* means that $I$ is equipped with a choice of two elements $i_0, i_1 : I$, such that the proposition $(i_0 = i_1) → \bot$ (i.e. $i_0 \neq i_1$) holds in the internal language of $\mathcal{E}$.
+* *Connected* means that the object/type $\smallint I$ is a proposition, i.e. $I$ essentially has *at most one* connected component.
+
+
+
+## Conservative Extensions
+
+### Extension Types
+
+### Graph Types
+
+## Parametricity via Cohesion
 
 # Toward a synthetic theory of parametricity
