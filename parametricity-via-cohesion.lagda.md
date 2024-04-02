@@ -28,6 +28,7 @@ As a first step toward the unification, simplification, and generalization of th
 module parametricity-via-cohesion where
     
 open import Agda.Primitive
+open import Data.Empty
 open import Agda.Builtin.Sigma
 open import Agda.Builtin.Equality
 open import Agda.Builtin.Equality.Rewrite
@@ -74,12 +75,7 @@ The notion of *contractibility* then expresses the idea that a type is essential
     isContr : ∀ {ℓ} (A : Set ℓ) → Set ℓ
     isContr A = Σ A (λ a → (b : A) → a ≡ b)
 ```
-Similarly, the notion of a type being a *proposition* expresses the idea that the type essentially has *at most one* inhabitant.
-```agda
-    isProp : ∀ {ℓ} (A : Set ℓ) → Set ℓ
-    isProp A = (a b : A) → a ≡ b
-```
-Finally, the notion of *equivalence* expresses the idea that a function between types has an *essentially unique* inverse. (Those familiar with HoTT may note that I use the *contractible fibres* definition of equivalence, as this shall be the most convenient to work with, for present purposes).
+Similarly, the notion of *equivalence* expresses the idea that a function between types has an *essentially unique* inverse. (Those familiar with HoTT may note that I use the *contractible fibres* definition of equivalence, as this shall be the most convenient to work with, for present purposes).
 ```agda
     isEquiv : ∀ {ℓ κ} {A : Set ℓ} {B : Set κ} 
               → (A → B) → Set (ℓ ⊔ κ)
@@ -147,21 +143,129 @@ Perhaps surprisingly, with these few definitions alone, we are already nearly in
 
 For this purpose, it is useful to take a geometric perspective upon cohesion, and correspondingly, parametricity. What we are after is essentially the *shape* of an abstract relation between points, and an object $I$ in our cohesive topos $\mathcal{E}$ (correspondingly, a type in our type theory) which *classifies* this shape in other objects (types) in that maps $I → A$ correspond to such abstract relations between points in $A$. For this purpose, I propose that the *shape* of an abstract relation is nothing other than a *line segment,* i.e. two distinct points which are somehow *connected*. By way of concrete example, in the topos of reflexive graphs $\mathbf{RGph}$, the role of a classifier for this shape is played by the "walking edge" graph $\bullet → \bullet$, consisting of two points and a single non-identity (directed) edge. More generally, using the language of cohesion, we can capture this notion of an abstract line segment in the following axiomatic characterization of $I$:
 
-> $I$ is an object of $\mathcal{E}$ that is *strictly bipointed* and *connected*.
+> $I$ is an object of $\mathcal{E}$ that is *strictly bipointed* and *weakly connected*.
 
 Unpacking the terms used in this characterization, we have the following:
 
 * *Strictly bipointed* means that $I$ is equipped with a choice of two elements $i_0, i_1 : I$, such that the proposition $(i_0 = i_1) → \bot$ (i.e. $i_0 \neq i_1$) holds in the internal language of $\mathcal{E}$.
-* *Connected* means that the object/type $\smallint I$ is a proposition, i.e. $I$ essentially has *at most one* connected component.
+* *Weakly connected* means that the unit map $\eta : I → \smallint I$ is essentially constant, in that it factors through a contractible object/type. Intuitively, this says that the image of $I$ in $\smallint I$ essentially consists of a single connected component.
 
+Note that the above-given example of the walking edge graph straightforwardly satisfies both of these requirements, as it consists of two distinct vertices belonging to a single (weakly) connected component. I also note in passing that, If the assumption of weak connectedness is strengthened to *strong connectedness* -- i.e. the object/type $\smallint I$ is itself contractible -- then the existence of such an object $I$ as above is equivalent to Lawvere's axiom of *sufficient cohesion,* as proved by him.
 
+We can begin to formalize this idea in Agda by postulating a type $I$ with two given elements $i_0,i_1$:
 
-## Conservative Extensions
+```agda
+postulate
+    I : Set₀
+    i0 i1 : I
+```
 
-### Extension Types
+We could also, in principle, directly postulate strict bipointedness of $I$, as in the following module:
 
-### Graph Types
+```agda
+module strictBpt where
+    postulate
+        axiom : i0 ≡ i1 → ⊥
+```
+
+However, this is in fact unnecessary, as this axiom will instead follow from an equivalent formulation introduced in the following subsection -- hence why this axiom is postulated in a separate module.
+
+On the other hand, we do not yet have the capability to postulate the axiom of connectedness as written above, since we have not yet formalized the $\smallint$ modality. We could do so, but again, it is in fact better for present purposes to rephrase this axiom in an equivalent form involving only the $\flat$ modality, which can be done as follows:
+
+> A crisp type $A$ is connected if and only if, for every *discrete* type $B$, any function $A → B$ is essentially constant, in the sense of factoring through a contractible type.
+
+To see that this equivalence holds: in one direction, assume that $A$ is weakly connected. Then for any map $f : A → B$, by the adjunction $\smallint ⊣ \flat$ and discreteness of $B$, there exist maps $f_\flat : A → \flat B$ and $f^\smallint : \smallint A → B$, such that following commuting diagram commutes: $$
+\begin{tikzcd}
+	{A} & {\smallint A} \\
+	{\flat B} & B
+	\arrow["{f_\flat}"{description}, from=1-1, to=2-1]
+	\arrow["{\f^\smallint}"{description}, from=1-2, to=2-2]
+	\arrow["{\epsilon}"{description}, from=2-1, to=2-2]
+	\arrow["{\eta}"{description}, from=1-1, to=1-2]
+	\arrow["f"{description}, from=1-1, to=2-2]
+\end{tikzcd}
+$$ Then since by assumption $\eta$ factors through a contractible type, so does $f$.
+
+In the other direction, assume that every map $f : A → B$ is essentially constant, for every discrete type $B$. Then in particular, the map $\eta : A → \smallint A$ is essentially constant, since $\smallint A$ is discrete (as it lies in the image of the *discretization* functor $\Delta$).
+
+Hence the property of $I$ being weakly connected is just as much a particular *relation* between $I$ and all discrete types as it is a property of $I$ itself. Specifically, if we think of maps $I → A$ as abstract *relations* or *edges* between elements of $A$, then weak connectedness of $I$ equivalently says that *all edges between elements of discrete types are constant*. 
+
+In order to conveniently express this property in Agda, it shall therefore be prudent first to introduce some additional constructs for ergonomically handling edges, analogous to the definition of *path* types in Cubical type theory. For this purpose, I now introduce a corresponding notion of *edge types*.
+
+## Edge Types and Connectedness
+
+In principle, given $a,b : A$, we could define the type of edges from $a$ to $b$ in $A$ as the type $Σ f : I → A . (f ~ i_0 = a) \times (f ~ i_1 = b)$. However, experience with such a naïve formalization shows that it incurs a high number of laborious transportations along equalities that should be easy enough to infer automatically. Hence I instead follow the approach taken by cubical type theory and related systems, such as simplicial type theory, and give an explicit axiomatization for *edge types*, with corresponding rewrite rules to apply the associated equalities automatically:
+
+```agda
+postulate
+    Edge : ∀ {ℓ} (A : I → Set ℓ) (a0 : A i0) (a1 : A i1) → Set ℓ
+```
+The introduction rule for edge types corresponds to *function abstraction*
+```agda
+    eabs : ∀ {ℓ} {A : I → Set ℓ} (f : (i : I) → A i) → Edge A (f i0) (f i1)
+```
+and likewise, the elimination rule corresponds to *function application*.
+```agda
+    eapp : ∀ {ℓ} {A : I → Set ℓ} {a0 : A i0} {a1 : A i1}
+           → (e : Edge A a0 a1) → (i : I) → A i
+```
+We may then postulate the usual $\beta$-law as an identity for this type, along with special identities for application to $i0$ and $i1$. All of these are made into rewrite rules, allowing Agda to apply them automatically, and thus obviating the need for excessive use of transport:
+```agda
+    ebeta : ∀ {ℓ} {A : I → Set ℓ} (f : (i : I) → A i) 
+            → (i : I) → eapp (eabs f) i ≡ f i
+    {-# REWRITE ebeta #-}
+    eapp0 : ∀ {ℓ} {A : I → Set ℓ} {a0 : A i0} {a1 : A i1} 
+            → (e : Edge A a0 a1) → eapp e i0 ≡ a0
+    {-# REWRITE eapp0 #-}
+    eapp1 : ∀ {ℓ} {A : I → Set ℓ} {a0 : A i0} {a1 : A i1} 
+            → (e : Edge A a0 a1) → eapp e i1 ≡ a1
+    {-# REWRITE eapp1 #-}
+```
+
+With this formalization of edge types in hand, we can straightforwardly formalize the equivalent formulation of weak connectedness of $I$ given above. For this purpose, we first define the map `idToEdge` that takes an identification $a ≡ b$ to an edge from $a$ to $b$:
+
+```agda
+idToEdge : ∀ {ℓ} {A : Set ℓ} {a b : A}
+           → a ≡ b → Edge (λ _ → A) a b
+idToEdge {a = a} refl = eabs (λ _ → a)
+```
+
+A type $A$ is *edge-discrete* if for all $a,b : A$ the mape `idToEdge` is an equivalence:
+```agda
+isEdgeDiscrete : ∀ {ℓ} (A : Set ℓ) → Set ℓ
+isEdgeDiscrete {ℓ = ℓ} A = 
+    {a b : A} → isEquiv (idToEdge {ℓ} {A} {a} {b})
+```
+
+We then postulate the following axioms:
+
+```agda
+postulate
+    edgeConst1 : ∀ {@♭ ℓ : Level} {@♭ A : Set ℓ} {a b : A}
+                 → isDiscrete A → (e : Edge (λ _ → A) a b)
+                 → Σ (a ≡ b) (λ p → idToEdge p ≡ e)
+    edgeConst2 : ∀ {@♭ ℓ : Level} {@♭ A : Set ℓ} {a b : A}
+                 → (dA : isDiscrete A) → (e : Edge (λ _ → A) a b)
+                 → (q : a ≡ b) → (r : idToEdge q ≡ e)
+                 → edgeConst1 dA e ≡ (q , r)
+```
+which together imply that, if $A$ is discrete, then it is *edge-discrete*:
+
+```agda
+isDisc→isEDisc : ∀ {@♭ ℓ : Level} {@♭ A : Set ℓ}
+                 → isDiscrete A → isEdgeDiscrete A
+isDisc→isEDisc dA e = 
+    (edgeConst1 dA e , λ (p , q) → edgeConst2 dA e p q)
+```
+
+## Graph Types and Strict Bipointedness of the Interval
 
 ## Parametricity via Cohesion
+
+## Some Applications
+
+### Impredicative Encodings of Inductive Types, Indexed Inductive Types & Higher Inductive Types
+
+### Modularity & Coinductive Types
 
 # Toward a synthetic theory of parametricity
