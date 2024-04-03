@@ -76,7 +76,7 @@ The notion of *cohesion* as an abstract characterization of when one category (s
 \end{tikzcd}
 $$ where $\mathcal{E,S}$ are both topoi, $\Delta, \nabla$ are both fully faithful, and $\Pi$ preserves finite products. Given such an arrangement, we think of the objects of $\mathcal{E}$ as *spaces* and those of $\mathcal{S}$ as *sets* (even if $\mathcal{S}$ is not the category of sets), where $\Gamma$ is the functor that sends a space to its set of points, $\Delta$ sends a set to the corresponding *discrete space*, $\nabla$ sends a set to the corresponding *codiscrete space*, and $\Pi$ sends a space to its set of connected components. These in turn induce a string of adjoint modalities on $\mathcal{E}$: $$
 \smallint \dashv \flat \dashv \sharp 
-$$ where $\smallint = \Delta \circ \Pi$ and $\sharp = \nabla \circ \Gamma$ are idempotent monads, $\flat = \Delta \circ \Gamma$ is an idempotent comonad, and both $\flat$ and $\sharp$ preserve finite limits.
+$$ where $\smallint = \Delta \circ \Pi$ and $\sharp = \nabla \circ \Gamma$ are idempotent monads, and $\flat = \Delta \circ \Gamma$ is an idempotent comonad.
 
 A concrete example of cohesion comes from the category of reflexive graphs $\mathbf{RGph}$, which is cohesive over the category of sets $\mathbf{Set}$. Here, $\Gamma$ is the functor that sends a reflexive graph to its set of vertices, $\Delta$ sends a set $V$ to the "discrete" reflexive graph on $V$ whose only edges are self-loops, $\nabla$ sends $V$ to the "codiscrete" graph where there is a unique edge between any pair of vertices, and $\Pi$ sends a reflexive graph to its set of (weakly) connected components. It is worth noting, at this point, that many classical models of parametricity are based upon semantic interpretations of types as reflexive graphs, and this, I wish to argue is no accident, and the key property of reflexive graphs underlying such interpretations is precisely their cohesive structure.[^1] More generally, for any base topos $\mathcal{S}$, we may construct its corresponding topos $\mathbf{RGph}(\mathcal{S})$ of *internal reflexive graphs*, which will similarly be cohesive over $\mathcal{S}$, so we can in fact use the language of such internal reflexive graphs to derive parametricity results for *any* topos (or indeed, any $\infty$-topos, as described below).
 
@@ -305,6 +305,56 @@ postulate
 ```
 Although a full proof of canonicity is beyond the scope of this paper, I conjecture that adding these rules suffices to preserve canonicity, and I verify a few concrete cases of this conjecture later in the paper.
 
+One additional axiom concerning edge-types and edge-discreteness, which will prove useful in what follows, is that the subuniverse of edge-discrete types is an *exponential ideal*, i.e. closed under taking (dependent) function types with arbitrary domains. We can formalize this axiom, and associated computation rules, in much the same way as the axiom of connectedness of $I$, as follows:
+
+```agda
+postulate
+    edExpIdeal1 : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
+                  → ((a : A) → isEdgeDiscrete (B a))
+                  → {f g : (a : A) → B a}
+                  → (e : Edge (λ _ → (a : A) → B a) f g)
+                  → Σ (f ≡ g) (λ p → idToEdge p ≡ e)
+    edExpIdeal2 : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
+                  → (edB : (a : A) → isEdgeDiscrete (B a))
+                  → {f g : (a : A) → B a}
+                  → (e : Edge (λ _ → (a : A) → B a) f g)
+                  → (q : f ≡ g) → (r : idToEdge q ≡ e)
+                  → edExpIdeal1 edB e ≡ (q , r)
+
+edExpIdeal : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
+               → ((a : A) → isEdgeDiscrete (B a))
+               → isEdgeDiscrete ((a : A) → B a)
+edExpIdeal edB {a = f} {b = g} e =
+    (edExpIdeal1 edB {f} {g} e , 
+        λ (q , r) → edExpIdeal2 edB {f} {g} e q r)
+
+rwEDExpIdeal1 : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
+                → (edB : (a : A) → isEdgeDiscrete (B a))
+                → (f : (a : A) → B a)
+                → edExpIdeal1 edB (eabs (λ _ → f)) ≡ (refl , refl)
+rwEDExpIdeal1 edB f = edExpIdeal2 edB (eabs (λ _ → f)) refl refl
+{-# REWRITE rwEDExpIdeal1 #-}
+
+postulate
+    rwEDExpIdeal2 : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
+                    → (edB : (a : A) → isEdgeDiscrete (B a))
+                    → (f : (a : A) → B a)
+                    → edExpIdeal2 edB (eabs (λ _ → f)) refl refl ≡ refl
+    {-# REWRITE rwEDExpIdeal2 #-}
+```
+
+Note that, metatheoretically, this axiom follows as a consequence of function extensionality, which itself follows from the assumption of univalence, the idea being that if two functions ranging over a family of edge-discrete types are edge-connected, then they are also pointwise edge-connected, hence pointwise equal (by assumption) and so equal as functions, by function extensionality. Since we have assumed neither univalence nor function extensionality in this formalization, it is thus necessary to include this axiom explicitly. However, as a consequence of this axiom, we can prove function extensionality for functions ranging over edge-connected types, as follows:
+
+```agda
+edFunExt : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
+           → (edB : (a : A) → isEdgeDiscrete (B a))
+           → (f g : (a : A) → B a)
+           → ((a : A) → f a ≡ g a) → f ≡ g
+edFunExt edB f g p = 
+    mkInv idToEdge (edExpIdeal edB {f} {g})
+          (eabs (λ i → λ a → eapp (idToEdge (p a)) i))
+```
+
 So much for the (weak) connectedness of $I$; let us now turn our attention to the other property we had previously stipulated of $I$, namely its *strict bipointedness*. As mentioned previously, we could simply postulate this stipulation directly as an axiom -- however, for the purpose of proving parametricity theorems, a more prudent strategy is to instead formalize a class of $I$-indexed type families, whose computational behavior follows from this assumption (and which, in turn, implies it). Because these type families essentially correspond to the *graphs* of predicates and relations on arbitrary types, I refer to them as *graph types*.
 
 ## Graph Types
@@ -440,38 +490,104 @@ PolyId : (ℓ : Level) → Set (lsuc ℓ)
 PolyId ℓ = (X : Set ℓ) → X → X
 ```
 
-Before proceeding with this proof, however, it will be prudent to consider the *meaning* of this theorem in the context of the cohesive type theory we have so-far developed. Specifically, I wish to ask: over which types should the type variable `X` in the type `(X : Set) → X → X` be considered as ranging in the statement of this theorem? Although it is tempting to think that the answer to this question should be "all types" (or as close to this as one can get predicatively), if one considers the relation between our cohesive setup and Reynolds' original setup of parametricity, a subtler picture emerges. A type, in our framework, corresponds not to a type in the object language of e.g. bare sets, but rather to an object of the cohesive topos used to interpret the parametric structure of this object language, e.g. the category of reflexive graphs. In this sense, we should expect the parametricity result for the type `(X : Set) → X → X` to generally hold only for those types corresponding to those in the object language, i.e. the *discrete types*. Indeed, the discrete types by construction are those which cannot distinguish elements of other types belonging to the same connected component, which intuitively captures the essential idea of parametricity -- that functions defined over these types must behave essentially the same for related inputs.
+Before proceeding with this proof, however, it will be prudent to consider the *meaning* of this theorem in the context of the cohesive type theory we have so-far developed. Specifically, I wish to ask: over which types should the type variable `X` in the type `(X : Set) → X → X` be considered as ranging in the statement of this theorem? 
+
+Although it is tempting to think that the answer to this question should be "all types" (or as close to this as one can get predicatively), if one considers the relation between our cohesive setup and Reynolds' original setup of parametricity, a subtler picture emerges. A type, in our framework, corresponds not to a type in the object language of e.g. bare sets, but rather to an object of the cohesive topos used to interpret the parametric structure of this object language, e.g. the category of reflexive graphs. In this sense, we should expect the parametricity result for the type `(X : Set) → X → X` to generally hold only for those types corresponding to those in the object language, i.e. the *discrete types*. Indeed, the discrete types by construction are those which cannot distinguish elements of other types belonging to the same connected component, which intuitively captures the essential idea of parametricity -- that functions defined over these types must behave essentially the same for related inputs.
 
 However, we cannot state this formulation of the theorem directly, since it would require us to bind $X$ as `@♭ X : Set`, which would kill all of the cohesive structure on `Set` and pose no restriction on the functions inhabiting this type. The solution, in this case, is to restrict the range of `X` to types which are *edge-discrete*, since this requirement can be stated even for `X` not crisp.
 
-The overall strategy of this proof is to 
+To prove the desired parametricity theorem for the type `PolyId` as above, then, we first prove a *substitution lemma* as follows:
+
+> For any edge-discrete type `A` and any type family `B : A → Set` with `a : A`, there is a function `(α : PolyId) → B a → B(α A a) `
 
 ```agda
 module paramId {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (B : A → Set ℓ) 
                    (a : A) (b : B a) (α : PolyId ℓ) where
-
-    lemma1 : B (g1fst i1 (α (Gph1 i1 A B) (g1pair i1 a (λ _ → b))))
-    lemma1 = g1snd (α (Gph1 i1 A B) (g1pair i1 a (λ _ → b)))
-
-    lemma2 : Edge (λ _ → A) 
-                  (α A a) 
-                  (g1fst i1 (α (Gph1 i1 A B) (g1pair i1 a (λ _ → b))))
-    lemma2 = eabs (λ i → g1fst i (α (Gph1 i A B) (g1pair i a (λ _ → b))))
-
-    lemma3 : B (α A a)
-    lemma3 = transp B (mkInv idToEdge edA lemma2) lemma1
 ```
+
+The key step in the proof of this lemma is to construct a "dependent edge" over the type family `Gph1 i A B : I → Set` as follows:
+
+```agda
+    lemma0 : (i : I) → Gph1 i A B
+    lemma0 i = α (Gph1 i A B) (g1pair i a (λ _ → b))
+```
+
+Then taking the second projection of `lemma0` evaluated at `i1` yields an element of $B$ evaluated at the first projection of `lemma0` evaluated at `i1`:
+
+```agda
+    lemma1 : B (g1fst i1 (lemma0 i1))
+    lemma1 = g1snd (lemma0 i1)
+```
+
+And we can use `lemma0` to construct an edge from `α A a` to `g1fst i1 (lemma0 i1)` as follows:
+
+```agda
+    lemma2 : Edge (λ _ → A) (α A a) 
+                  (g1fst i1 (lemma0 i1))
+    lemma2 = eabs (λ i → g1fst i (lemma0 i))
+```
+
+And then since `A` is edge-discrete, this edge becomes an equality along which we can transport `lemma1`:
+
+```
+    substLemma : B (α A a)
+    substLemma = transp B (mkInv idToEdge edA lemma2) lemma1
+```
+
+From this substitution lemma, it straightforwardly follows that any element of `PolyId` must be extensionally equivalent to the polymorphic identity function when evaluated at an edge-discrete type:
 
 ```agda
 polyId : ∀ {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (a : A)
          → (α : PolyId ℓ) → α A a ≡ a
-polyId A edA a α = paramId.lemma3 A edA (λ b → b ≡ a) a refl α
+polyId A edA a α = paramId.substLemma A edA (λ b → b ≡ a) a refl α
 ```
 
+```agda
+module BoolDiscrete where
+    open import Agda.Builtin.Bool
+
+    boolIsDisc : isDiscrete Bool
+    boolIsDisc false = (con false , refl) , λ { (con false , refl) → refl}
+    boolIsDisc true  = (con true  , refl) , λ { (con true , refl) → refl}
+
+    boolIsEDisc : isEdgeDiscrete Bool
+    boolIsEDisc = isDisc→isEDisc boolIsDisc
+
+    polyIdBool : (α : PolyId lzero) → (b : Bool) → α Bool b ≡ b
+    polyIdBool α b = polyId Bool boolIsEDisc b α
+
+    shouldBeRefl : true ≡ true
+    shouldBeRefl = polyIdBool (λ X → λ x → x) true
+```
+
+```agda
+EDPolyId : (ℓ : Level) → Set (lsuc ℓ)
+EDPolyId ℓ = (X : Set ℓ) → isEdgeDiscrete X → X → X
+
+{- edPolyId : ∀ {ℓ} → isEdgeDiscrete (EDPolyId ℓ)
+edPolyId = edExpIdeal (λ X → edExpIdeal (λ edX → edExpIdeal (λ x → edX))) -}
+```
 ## Some Applications
 
 ### Impredicative Encodings
 
+```agda
+impredNat : (ℓ : Level) → Set (lsuc ℓ)
+impredNat ℓ = (X : Set ℓ) → (X → X) → X → X
+
+{- module uParamNat {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (B : A → Set ℓ) 
+                     (a : A) (b : B a) 
+                     (f : A → A) (ff : (x : A) → B x → B (f x))
+                     (α : impredNat ℓ) where
+    
+    lemma0 : (i : I) → Gph1 i A B
+    lemma0 i = α (Gph1 i A B)
+                 (λ g → g1pair i (f (g1fst i g))
+                                 (λ p → (transp (ff (g1fst i1 (transp -}
+```
+
 ### Modularity & Coinduction
 
 # Toward a synthetic theory of parametricity
+
+## Acknowledgements
