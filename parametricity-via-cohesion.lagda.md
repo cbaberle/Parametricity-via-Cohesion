@@ -718,73 +718,44 @@ modularity X Y F fx fy R e C edC c =
           (eabs (λ i → ∃pair (Gph2 i i X Y R) (eapp e i) C c))
 
 postulate
-    ℕ∞ : Set₀
-    edℕ∞1 : ∀ {m n : ℕ∞} (e : Edge (λ _ → ℕ∞) m n) 
+    2ᴺ : Set₀
+    ed2ᴺ1 : ∀ {m n : 2ᴺ} (e : Edge (λ _ → 2ᴺ) m n) 
             → Σ (m ≡ n) (λ p → idToEdge p ≡ e)
-    edℕ∞2 : ∀ {m n : ℕ∞} (e : Edge (λ _ → ℕ∞) m n)
+    ed2ᴺ2 : ∀ {m n : 2ᴺ} (e : Edge (λ _ → 2ᴺ) m n)
             → (q : m ≡ n) (r : idToEdge q ≡ e)
-            → edℕ∞1 e ≡ (q , r)
-    isZero : ℕ∞ → Bool
-    pred : (n : ℕ∞) → (isZero n ≡ false) → ℕ∞
-    corecℕ∞ : (X : Set₀) 
-              → (isz : X → Bool) 
-              → ((x : X) → isz x ≡ false → X)
-              → X → ℕ∞
-    isZeroβ : (X : Set₀) 
-              → (isz : X → Bool)
-              → (pr : (x : X) → isz x ≡ false → X)
-              → (x : X) →  isZero (corecℕ∞ X isz pr x) ≡ isz x
-    {-# REWRITE isZeroβ #-}
-    predβ : (X : Set₀) 
-            → (isz : X → Bool)
-            → (pr : (x : X) → isz x ≡ false → X)
-            → (x : X) → (p : isz x ≡ false)
-            → pred (corecℕ∞ X isz pr x) p ≡ corecℕ∞ X isz pr (pr x p)
-    {-# REWRITE predβ #-}
-    ℕ∞η : (n : ℕ∞) → corecℕ∞ ℕ∞ isZero pred n ≡ n
-    {-# REWRITE ℕ∞η #-}
+            → ed2ᴺ1 e ≡ (q , r)
+    head : 2ᴺ → Bool
+    tail : 2ᴺ → 2ᴺ
+    corec2ᴺ : (X : Set₀) → (X → Bool) → (X → X) → X → 2ᴺ
+    headβ : (X : Set₀) (hd : X → Bool) (tl : X → X) (x : X) 
+            → head (corec2ᴺ X hd tl x) ≡ hd x
+    {-# REWRITE headβ #-}
+    tailβ : (X : Set₀) (hd : X → Bool) (tl : X → X) (x : X) 
+            → tail (corec2ᴺ X hd tl x) ≡ corec2ᴺ X hd tl (tl x)
+    {-# REWRITE tailβ #-}
+    2ᴺη : (n : 2ᴺ) → corec2ᴺ 2ᴺ head tail n ≡ n
+    {-# REWRITE 2ᴺη #-}
 
-edℕ∞ : isEdgeDiscrete ℕ∞
-edℕ∞ e = (edℕ∞1 e , λ (q , r) → edℕ∞2 e q r)
+ed2ᴺ : isEdgeDiscrete 2ᴺ
+ed2ᴺ e = (ed2ᴺ1 e , λ (q , r) → ed2ᴺ2 e q r)
 
-rwEDℕ∞1 : (n : ℕ∞) → edℕ∞1 (eabs (λ _ → n)) ≡ (refl , refl)
-rwEDℕ∞1 n = edℕ∞2 (eabs (λ _ → n)) refl refl
-{-# REWRITE rwEDℕ∞1 #-}
+rwED2ᴺ1 : (n : 2ᴺ) → ed2ᴺ1 (eabs (λ _ → n)) ≡ (refl , refl)
+rwED2ᴺ1 n = ed2ᴺ2 (eabs (λ _ → n)) refl refl
+{-# REWRITE rwED2ᴺ1 #-}
 
 postulate
-    rwEDℕ∞2 : (n : ℕ∞) → edℕ∞2 (eabs (λ _ → n)) refl refl ≡ refl
-    {-# REWRITE rwEDℕ∞2 #-}
+    rwED2ᴺ2 : (n : 2ᴺ) → ed2ᴺ2 (eabs (λ _ → n)) refl refl ≡ refl
+    {-# REWRITE rwED2ᴺ2 #-}
 
-bisimℕ∞ : (X : Set₀) (Y : Set₀) 
-          → (iszX : X → Bool) (iszY : Y → Bool)
-          → (prX : (x : X) → iszX x ≡ false → X)
-          → (prY : (y : Y) → iszY y ≡ false → Y)
-          → (X → Y → Set) → Set
-bisimℕ∞ X Y iszX iszY prX prY R =
-    Σ ((x : X) (y : Y) → R x y → iszX x ≡ iszY y)
-      (λ p → (x : X) (y : Y) 
-             → (r : R x y) 
-             → (q : iszX x ≡ false)
-             → R (prX x q) 
-                 (prY y (transp (λ b → b ≡ false) 
-                                (p x y r) q)))
+seq2ᴺ : 2ᴺ → (ℕ → Bool)
+seq2ᴺ s n = fst (recℕ n (Σ Bool (λ _ → 2ᴺ)) 
+                      (λ (b , s') → (head s' , tail s')) 
+                      (head s , s))
 
-Coalgℕ∞ : Set₀ → Set₀
-Coalgℕ∞ X = 
-    Σ X (λ _ → Σ (X → Bool) (λ f → (x : X) → f x ≡ false → X))
+_∼_ : 2ᴺ → 2ᴺ → Set₀
+s ∼ t = (n : ℕ) → seq2ᴺ s n ≡ seq2ᴺ t n
 
-bisimℕ∞→Edge : (X : Set₀) (Y : Set₀)
-               → (iszX : X → Bool) (iszY : Y → Bool)
-               → (prX : (x : X) → iszX x ≡ false → X)
-               → (prY : (y : Y) → iszY y ≡ false → Y)
-               → (R : X → Y → Set ℓ) 
-               → bisimℕ∞ X Y iszX iszY prX prY R
-               → (x : X) (y : Y) (r : R x y) 
-               → (i j : I) → Coalgℕ∞ (Gph2 i j X Y R)
-bisimℕ∞→Edge X Y x y iszX iszY prX prY R x y r (p , pr) i j =
-    (g2triple i j (λ _ → x) (λ _ → y) (λ _ → r) ,
-        (λ g →  , ))
-
+∼edge : (s t : 2ᴺ) → s ∼ t → (i j : I) → 
 ```
 
 # Toward a synthetic theory of parametricity
