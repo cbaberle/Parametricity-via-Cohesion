@@ -1,13 +1,36 @@
 ---
 title: Parametricity via Cohesion
 author: C.B. Aberlé
+classoption: 12pt
+geometry:
+    - top=1in
+    - bottom=1in
+    - left=1in
+    - right=1in
 header-includes:
     - \usepackage{quiver}
+    - \usepackage[utf8]{inputenc}
+    - \usepackage{newunicodechar}
+    - \newunicodechar{λ}{\ensuremath{\mathnormal\lambda}}
+    - \newunicodechar{∀}{\ensuremath{\mathnormal\forall}}
+    - \newunicodechar{≡}{\ensuremath{\mathnormal\equiv}}
+    - \newunicodechar{ℓ}{\ensuremath{\mathnormal\ell}}
+    - \newunicodechar{κ}{\ensuremath{\mathnormal\kappa}}
+    - \newunicodechar{Σ}{\ensuremath{\mathnormal\Sigma}}
+    - \newunicodechar{⊔}{\ensuremath{\mathnormal\sqcup}}
+    - \newunicodechar{♭}{\ensuremath{\mathnormal\flat}}
+    - \newunicodechar{ε}{\ensuremath{\mathnormal\epsilon}}
+    - \newunicodechar{₀}{\ensuremath{\mathnormal{_0}}}
+    - \newunicodechar{⊥}{\ensuremath{\mathnormal\bot}}
+    - \newunicodechar{⊤}{\ensuremath{\mathnormal\top}}
+    - \usepackage{fourier}
+    - \usepackage{cochineal}
+    - \DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}
 ---
 
-**Abstract:** Parametricity is a key metatheoretic property of type systems, from which one is able to derive strong uniformity/modularity properties of proofs and programs within these systems. In recent years, various systems of dependent type theory have emerged with the aim of internalizing such parametric reasoning into their internal logic, employing various syntactic and semantic methods and concepts toward this end. This paper presents a first step toward the unification, simplification, and extension of these various methods for internalizing parametricity. Specifically, I argue that there is an essentially modal aspect of parametricity, which is intimately connected with the category-theoretic concept of cohesion.
+> **Abstract:** Parametricity is a key metatheoretic property of type systems, from which one is able to derive strong uniformity/modularity properties of proofs and programs within these systems. In recent years, various systems of dependent type theory have emerged with the aim of internalizing such parametric reasoning into their internal logic, employing various syntactic and semantic methods and concepts toward this end. This paper presents a first step toward the unification, simplification, and extension of these various methods for internalizing parametricity. Specifically, I argue that there is an essentially modal aspect of parametricity, which is intimately connected with the category-theoretic concept of cohesion.
 
-On this basis, I describe a general categorical semantics for modal parametricity, develop a corresponding framework of axioms (with computational interpretations) in dependent type theory that can be used to internally represent and reason about such parametricity, and show this in practice by implementing these axioms in Agda and using them to verify parametricity properties of Agda programs. In closing, I sketch the outlines of a more general synthetic theory of parametricity, and consider potential applications in domains ranging from homotopy type theory to the analysis of linear programs.
+> On this basis, I describe a general categorical semantics for modal parametricity, develop a corresponding framework of axioms (with computational interpretations) in dependent type theory that can be used to internally represent and reason about such parametricity, and show this in practice by implementing these axioms in Agda and using them to verify parametricity properties of Agda programs. In closing, I sketch the outlines of a more general synthetic theory of parametricity, and consider potential applications in domains ranging from homotopy type theory to the analysis of linear programs.
 
 # The past, present & future of parametricity in type theory
 
@@ -144,14 +167,14 @@ open cohesion
 
 Perhaps surprisingly, with these few definitions alone, we are already nearly in a position to derive parametricity theorems in Agda (and more generally, in any type theory supporting the above constructions). What more is needed is merely a way of detecting when the elements of a given type are *related,* or somehow bound together, by the cohesive structure of that type.
 
-For this purpose, it is useful to take a geometric perspective upon cohesion, and correspondingly, parametricity. What we are after is essentially the *shape* of an abstract relation between points, and an object $I$ in our cohesive topos $\mathcal{E}$ (correspondingly, a type in our type theory) which *classifies* this shape in other objects (types) in that maps $I → A$ correspond to such abstract relations between points in $A$. For this purpose, I propose that the *shape* of an abstract relation is nothing other than a *line segment,* i.e. two distinct points which are somehow *connected*. By way of concrete example, in the topos of reflexive graphs $\mathbf{RGph}$, the role of a classifier for this shape is played by the "walking edge" graph $\bullet → \bullet$, consisting of two points and a single non-identity (directed) edge. More generally, using the language of cohesion, we can capture this notion of an abstract line segment in the following axiomatic characterization of $I$:
+For this purpose, it is useful to take a geometric perspective upon cohesion, and correspondingly, parametricity. What we are after is essentially the *shape* of an abstract relation between points, and an object $I$ in our cohesive topos $\mathcal{E}$ (correspondingly, a type in our type theory) which *classifies* this shape in other objects (types) in that maps $I \to A$ correspond to such abstract relations between points in $A$. For this purpose, I propose that the *shape* of an abstract relation is nothing other than a *line segment,* i.e. two distinct points which are somehow *connected*. By way of concrete example, in the topos of reflexive graphs $\mathbf{RGph}$, the role of a classifier for this shape is played by the "walking edge" graph $\bullet \to \bullet$, consisting of two points and a single non-identity (directed) edge. More generally, using the language of cohesion, we can capture this notion of an abstract line segment in the following axiomatic characterization of $I$:
 
 > $I$ is an object of $\mathcal{E}$ that is *strictly bipointed* and *weakly connected*.
 
 Unpacking the terms used in this characterization, we have the following:
 
-* *Strictly bipointed* means that $I$ is equipped with a choice of two elements $i_0, i_1 : I$, such that the proposition $(i_0 = i_1) → \bot$ (i.e. $i_0 \neq i_1$) holds in the internal language of $\mathcal{E}$.
-* *Weakly connected* means that the unit map $\eta : I → \smallint I$ is essentially constant, in that it factors through a contractible object/type. Intuitively, this says that the image of $I$ in $\smallint I$ essentially consists of a single connected component.
+* *Strictly bipointed* means that $I$ is equipped with a choice of two elements $i_0, i_1 : I$, such that the proposition $(i_0 = i_1) \to \bot$ (i.e. $i_0 \neq i_1$) holds in the internal language of $\mathcal{E}$.
+* *Weakly connected* means that the unit map $\eta : I \to \smallint I$ is essentially constant, in that it factors through a contractible object/type. Intuitively, this says that the image of $I$ in $\smallint I$ essentially consists of a single connected component.
 
 Note that the above-given example of the walking edge graph straightforwardly satisfies both of these requirements, as it consists of two distinct vertices belonging to a single (weakly) connected component. I also note in passing that, If the assumption of weak connectedness is strengthened to *strong connectedness* -- i.e. the object/type $\smallint I$ is itself contractible -- then the existence of such an object $I$ as above is equivalent to Lawvere's axiom of *sufficient cohesion,* as proved by him.
 
@@ -175,29 +198,29 @@ However, this is in fact unnecessary, as this axiom will instead follow from an 
 
 On the other hand, we do not yet have the capability to postulate the axiom of connectedness as written above, since we have not yet formalized the $\smallint$ modality. We could do so, but again, it is in fact better for present purposes to rephrase this axiom in an equivalent form involving only the $\flat$ modality, which can be done as follows:
 
-> A crisp type $A$ is connected if and only if, for every *discrete* type $B$, any function $A → B$ is essentially constant, in the sense of factoring through a contractible type.
+> A crisp type $A$ is connected if and only if, for every *discrete* type $B$, any function $A \to B$ is essentially constant, in the sense of factoring through a contractible type.
 
-To see that this equivalence holds: in one direction, assume that $A$ is weakly connected. Then for any map $f : A → B$, by the adjunction $\smallint ⊣ \flat$ and discreteness of $B$, there exist maps $f_\flat : A → \flat B$ and $f^\smallint : \smallint A → B$, such that following commuting diagram commutes: $$
+To see that this equivalence holds: in one direction, assume that $A$ is weakly connected. Then for any map $f : A \to B$, by the adjunction $\smallint \dashv \flat$ and discreteness of $B$, there exist maps $f_\flat : A \to \flat B$ and $f^\smallint : \smallint A \to B$, such that following commuting diagram commutes: $$
 \begin{tikzcd}
 	{A} & {\smallint A} \\
 	{\flat B} & B
 	\arrow["{f_\flat}"{description}, from=1-1, to=2-1]
-	\arrow["{\f^\smallint}"{description}, from=1-2, to=2-2]
+	\arrow["{f^\smallint}"{description}, from=1-2, to=2-2]
 	\arrow["{\epsilon}"{description}, from=2-1, to=2-2]
 	\arrow["{\eta}"{description}, from=1-1, to=1-2]
 	\arrow["f"{description}, from=1-1, to=2-2]
 \end{tikzcd}
 $$ Then since by assumption $\eta$ factors through a contractible type, so does $f$.
 
-In the other direction, assume that every map $f : A → B$ is essentially constant, for every discrete type $B$. Then in particular, the map $\eta : A → \smallint A$ is essentially constant, since $\smallint A$ is discrete (as it lies in the image of the *discretization* functor $\Delta$).
+In the other direction, assume that every map $f : A \to B$ is essentially constant, for every discrete type $B$. Then in particular, the map $\eta : A \to \smallint A$ is essentially constant, since $\smallint A$ is discrete (as it lies in the image of the *discretization* functor $\Delta$).
 
-Hence the property of $I$ being weakly connected is just as much a particular *relation* between $I$ and all discrete types as it is a property of $I$ itself. Specifically, if we think of maps $I → A$ as abstract *relations* or *edges* between elements of $A$, then weak connectedness of $I$ equivalently says that *all edges between elements of discrete types are constant*. 
+Hence the property of $I$ being weakly connected is just as much a particular *relation* between $I$ and all discrete types as it is a property of $I$ itself. Specifically, if we think of maps $I \to A$ as abstract *relations* or *edges* between elements of $A$, then weak connectedness of $I$ equivalently says that *all edges between elements of discrete types are constant*. 
 
 In order to conveniently express this property in Agda, it shall therefore be prudent first to introduce some additional constructs for ergonomically handling edges, analogous to the definition of *path* types in Cubical type theory. For this purpose, I now introduce a corresponding notion of *edge types*.
 
 ## Edge Types
 
-In principle, given $a,b : A$, we could define the type of edges from $a$ to $b$ in $A$ as the type $Σ f : I → A . (f ~ i_0 = a) \times (f ~ i_1 = b)$. However, experience with such a naïve formalization shows that it incurs a high number of laborious transportations along equalities that should be easy enough to infer automatically. Hence I instead follow the approach taken by cubical type theory and related systems, such as simplicial type theory, and give an explicit axiomatization for *edge types*, with corresponding rewrite rules to apply the associated equalities automatically:
+In principle, given $a,b : A$, we could define the type of edges from $a$ to $b$ in $A$ as the type $\Sigma f : I \to A . (f ~ i_0 = a) \times (f ~ i_1 = b)$. However, experience with such a naïve formalization shows that it incurs a high number of laborious transportations along equalities that should be easy enough to infer automatically. Hence I instead follow the approach taken by cubical type theory and related systems, such as simplicial type theory, and give an explicit axiomatization for *edge types*, with corresponding rewrite rules to apply the associated equalities automatically:
 
 ```agda
 postulate
@@ -205,7 +228,8 @@ postulate
 ```
 The introduction rule for edge types corresponds to *function abstraction*
 ```agda
-    eabs : ∀ {ℓ} {A : I → Set ℓ} (f : (i : I) → A i) → Edge A (f i0) (f i1)
+    eabs : ∀ {ℓ} {A : I → Set ℓ} 
+           → (f : (i : I) → A i) → Edge A (f i0) (f i1)
 ```
 and likewise, the elimination rule corresponds to *function application*.
 ```agda
@@ -284,7 +308,7 @@ So much for the (weak) connectedness of $I$; let us now turn our attention to th
 
 ## Graph Types
 
-I begin with an exposition of the simplest class of graph types: *unary graph types*, which, as the name would imply, correspond to graphs of unary predicates. Given a type $A$, a type family $B : A → \mathsf{Type}$, and an element $i : I$, the *graph type* $\mathsf{Gph}^1 ~ i ~ A ~ B$ is defined to be equal to $A$ when $i$ is $i_0$, and equivalent to $Σ x : A . B x$ when $i$ is $i_1$. Intuitively, an element of $\mathsf{Gph}^1 ~ i ~ A ~ B$ is a dependent pair whose second element *only exists when $i$ is equal to $i_1$*. We may formalize this in Agda as follows, by postulating a rewrite rule that evaluates $\mathsf{Gph}^1 ~ i_0 ~ A ~ B$ to $A$:
+I begin with an exposition of the simplest class of graph types: *unary graph types*, which, as the name would imply, correspond to graphs of unary predicates. Given a type $A$, a type family $B : A \to \mathsf{Type}$, and an element $i : I$, the *graph type* $\mathsf{Gph}^1 ~ i ~ A ~ B$ is defined to be equal to $A$ when $i$ is $i_0$, and equivalent to $\Sigma x : A . B x$ when $i$ is $i_1$. Intuitively, an element of $\mathsf{Gph}^1 ~ i ~ A ~ B$ is a dependent pair whose second element *only exists when $i$ is equal to $i_1$*. We may formalize this in Agda as follows, by postulating a rewrite rule that evaluates $\mathsf{Gph}^1 ~ i_0 ~ A ~ B$ to $A$:
 
 ```agda
 postulate
@@ -343,16 +367,75 @@ strBpt : (i1 ≡ i0) → ⊥
 strBpt p = g1snd (transp (λ i → Gph1 i ⊤ (λ _ → ⊥)) p tt)
 ```
 
-And in fact, the converse holds under the assumption of univalence. Specifically, in the presence of univalence and the assumption of strict bipointedness for $I$, the type $\mathsf{Gph}^1 ~ i ~ A ~ B$ may be regarded as a computationally convenient shorthand for the type $\Sigma x : A . (i = i_1) → B x$, in much the same way as the type $\mathsf{Edge} ~ A ~ a_0 ~ a_1$ serves as shorthand for the type $\Sigma f : (\Pi i : I . A i) . (f ~ i_0 = a_0) \times (f ~ i_1 = a_1)$. This fact is due to the following equivalence $$\begin{array}{rl} &\Sigma x : A . (i_0 = i_1) \to B x\\ \simeq & \Sigma x : A . \bot \to B x\\ \simeq & \Sigma x : A . \top \\ \simeq & A \end{array}$$ which, under univalence, becomes an identity between $\Sigma x : A . (i_0 = i_1) \to B x$ and $A$, thereby justifying the use of this and associated identities as rewrite rules which, conjecturally, are fully compatible with canonictiy.
+And in fact, the converse holds under the assumption of univalence. Specifically, in the presence of univalence and the assumption of strict bipointedness for $I$, the type $\mathsf{Gph}^1 ~ i ~ A ~ B$ may be regarded as a computationally convenient shorthand for the type $\Sigma x : A . (i = i_1) \to B x$, in much the same way as the type $\mathsf{Edge} ~ A ~ a_0 ~ a_1$ serves as shorthand for the type $\Sigma f : (\Pi i : I . A i) . (f ~ i_0 = a_0) \times (f ~ i_1 = a_1)$. This fact is due to the following equivalence $$\begin{array}{rl} &\Sigma x : A . (i_0 = i_1) \to B x\\ \simeq & \Sigma x : A . \bot \to B x\\ \simeq & \Sigma x : A . \top \\ \simeq & A \end{array}$$ which, under univalence, becomes an identity between $\Sigma x : A . (i_0 = i_1) \to B x$ and $A$, thereby justifying the use of this and associated identities as rewrite rules which, conjecturally, are fully compatible with canonictiy.
 
 In addition to unary graph types, we also have *binary* graphs types for representing graphs of binary relations. That is, given types $A,B$, a type family $C : A \to B \to \mathsf{Type}$, and elements $i,j : I$, there is a type $\mathsf{Gph}^2 ~ i ~ j ~ A ~ B ~ C$. Intuitively, $\mathsf{Gph}^2 ~ i ~ j ~ A ~ B ~ C$ is a type of dependent triples whose first element (of type $A$) exists only under the assumption that $i = i_0$, whose second element exists only under the assumption that $j = i_1$, and whose third element, which may depend upon the first and second, exists only under the conjunction of these assumptions. Hence $\mathsf{Gph}^2 ~ i_0 ~ i_0 ~ A ~ B ~ C$ is equal to $A$ while $\mathsf{Gph}^2 ~ i_1 ~ i_1 ~ A ~ B ~ C$ is equal to $B$. This intuitive description is formalized in the following rules, which are entirely analogous to those for unary graph types:
+
+```agda
+postulate
+    Gph2 : ∀ {ℓ} (i j : I) (A : Set ℓ) (B : Set ℓ)
+           → (C : A → B → Set ℓ) → Set ℓ
+    g2rw00 : ∀ {ℓ} (A : Set ℓ) (B : Set ℓ) (C : A → B → Set ℓ) 
+             → Gph2 i0 i0 A B C ≡ A
+    {-# REWRITE g2rw00 #-}
+    g2rw11 : ∀ {ℓ} (A : Set ℓ) (B : Set ℓ) (C : A → B → Set ℓ) 
+             → Gph2 i1 i1 A B C ≡ B
+    {-# REWRITE g2rw11 #-}
+
+    g2triple : ∀ {ℓ} (i j : I) {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
+               → (a : (i ≡ i0) → A) → (b : (j ≡ i1) → B)
+               → (c : (p : i ≡ i0) (q : j ≡ i1) → C (a p) (b q))
+               → Gph2 i j A B C
+    g2triple00 : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
+                 → (a : (i0 ≡ i0) → A) → (b : (i0 ≡ i1) → B)
+                 → (c : (p : i0 ≡ i0) (q : i0 ≡ i1) → C (a p) (b q))
+                 → g2triple i0 i0 {C = C} a b c ≡ a refl
+    {-# REWRITE g2triple00 #-}
+    g2triple11 : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
+                 → (a : (i1 ≡ i0) → A) → (b : (i1 ≡ i1) → B)
+                 → (c : (p : i1 ≡ i0) (q : i1 ≡ i1) → C (a p) (b q))
+                 → g2triple i1 i1 {C = C} a b c ≡ b refl
+    {-# REWRITE g2triple11 #-}
+
+    g2fst : ∀ {ℓ} (j : I) {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
+            → Gph2 i0 j A B C → A
+    g2beta1 : ∀ {ℓ} (j : I) {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
+              → (a : (i0 ≡ i0) → A) → (b : (j ≡ i1) → B)
+              → (c : (p : i0 ≡ i0) (q : j ≡ i1) → C (a p) (b q))
+              → g2fst j (g2triple i0 j {C = C} a b c) ≡ a refl
+    {-# REWRITE g2beta1 #-}
+    g2fst00 : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
+              → (g : Gph2 i0 i0 A B C) → g2fst i0 {B = B} {C = C} g ≡ g
+    {-# REWRITE g2fst00 #-}
+
+    g2snd : ∀ {ℓ} (i : I) {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
+            → Gph2 i i1 A B C → B
+    g2beta2 : ∀ {ℓ} (i : I) {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
+              → (a : (i ≡ i0) → A) → (b : (i1 ≡ i1) → B)
+              → (c : (p : i ≡ i0) (q : i1 ≡ i1) → C (a p) (b q))
+              → g2snd i (g2triple i i1 {C = C} a b c) ≡ b refl
+    {-# REWRITE g2beta2 #-}
+    g2snd11 : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
+              → (g : Gph2 i1 i1 A B C) → g2snd i1 {A = A} {C = C} g ≡ g
+    {-# REWRITE g2snd11 #-}
+
+    g2thrd : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
+             → (g : Gph2 i0 i1 A B C) → C (g2fst i1 g) (g2snd i0 g)
+    g2beta3 : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
+              → (a : (i0 ≡ i0) → A) → (b : (i1 ≡ i1) → B)
+              → (c : (p : i0 ≡ i0) (q : i1 ≡ i1) → C (a p) (b q))
+              → g2thrd (g2triple i0 i1 {C = C} a b c) ≡ c refl refl
+    {-# REWRITE g2beta3 #-}
+```
+
+In principle, we could continue in this manner, and define graph types for relations of any arity. However, for present purposes, unary and binary graph types are sufficient.
 
 ## Parametricity via Sufficient Cohesion
 
 ## Some Applications
 
-### Impredicative Encodings of Inductive Types, Indexed Inductive Types & Higher Inductive Types
+### Impredicative Encodings
 
-### Modularity & Coinductive Types
+### Modularity & Coinduction
 
 # Toward a synthetic theory of parametricity
