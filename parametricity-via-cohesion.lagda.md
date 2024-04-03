@@ -54,6 +54,7 @@ module parametricity-via-cohesion where
 open import Agda.Primitive
 open import Data.Empty
 open import Agda.Builtin.Unit
+open import Agda.Builtin.Bool
 open import Agda.Builtin.Sigma
 open import Agda.Builtin.Equality
 open import Agda.Builtin.Equality.Rewrite
@@ -88,14 +89,33 @@ I therefore begin by recalling some standard definitions from HoTT, which shall 
 ```agda
 module hott where
 ```
-First of all, we have the operation of *transport*, which embodies the principle of *indiscernability of identicals* (i.e. if `a0 = a1` and `B a1` then `B a0`):
+First of all, we have the induction principle for the identity type, aka the `J` rule:
+
 ```agda
-    transp : ∀ {ℓ κ} {A : Set ℓ} {a0 a1 : A} 
-             → (B : A → Set κ) → (a0 ≡ a1) → B a1 → B a0
-    transp B refl b = b
+    J : ∀ {ℓ κ} {A : Set ℓ} {a : A}
+        → (B : (b : A) → a ≡ b → Set κ)
+        → {b : A} → (p : a ≡ b) → B a refl → B b p
+    J B refl b = b
 ```
 
-The notion of *contractibility* then expresses the idea that a type is essentially uniquely inhabited.
+As an immediate corollary of this, we obtain the operation of *tranport*:
+```agda
+    transp : ∀ {ℓ κ} {A : Set ℓ} {a b : A} 
+             → (B : A → Set κ) → (a ≡ b) → B a → B b
+    transp B p b = J (λ a _ → B a) p b
+```
+Additionally, both `J` and `transp` are symmetric, and so can be applied "in the opposite direction":
+```agda
+    J⁻¹ : ∀ {ℓ κ} {A : Set ℓ} {a : A}
+          → (B : (b : A) → a ≡ b → Set κ)
+          → {b : A} → (p : a ≡ b) → B b p → B a refl
+    J⁻¹ B refl b = b
+
+    transp⁻¹ : ∀ {ℓ κ} {A : Set ℓ} {a b : A} 
+               → (B : A → Set κ) → (a ≡ b) → B b → B a
+    transp⁻¹ B p b = J⁻¹ (λ a _ → B a) p b
+```
+The notion of *contractibility* expresses the idea that a type is essentially uniquely inhabited.
 ```agda
     isContr : ∀ {ℓ} (A : Set ℓ) → Set ℓ
     isContr A = Σ A (λ a → (b : A) → a ≡ b)
@@ -114,7 +134,7 @@ Similarly, the notion of *equivalence* expresses the idea that a function betwee
 open hott
 ```
 
-The reader familiar with HoTT may note that, so far, we have not included anything relating to the *univalence axiom*, arguably the characteristic axiom of HoTT. In fact, this is by design, as a goal of the current formalization is to assume only axioms that can be given straightforward computational interpretations that preserve the property that every term of the ambient type theory evaluates to a *canonical normal form* (canonicity), so that these axioms give a *constructive* and *computationally sound* interpretation of parametricity. While the univalence axiom *can* be given a computational interpretation compatible with canonicity, as in Cubical Type Theory, doing so is decidedly *not* a straightforward matter. Moreover, it turns out that the univalence axiom is largely unneeded in what follows, save for demonstrating admissibility of some additional axioms which admit much more striaghtforward computational interpretations that are (conjecturally) compatible with canonicity. I thus shall have need for univalence only as a metatheoretic assumption. Nonetheless, for expositional purposes, it is useful to define univalence formally, for which purpose I include the following submodule:
+The reader familiar with HoTT may note that, so far, we have not included anything relating to the *univalence axiom*, arguably the characteristic axiom of HoTT. In fact, this is by design, as a goal of the current formalization is to assume only axioms that can be given straightforward computational interpretations that preserve the property that every closed term of the ambient type theory evaluates to a *canonical normal form* (canonicity), so that these axioms give a *constructive* and *computationally sound* interpretation of parametricity. While the univalence axiom *can* be given a computational interpretation compatible with canonicity, as in Cubical Type Theory, doing so is decidedly *not* a straightforward matter. Moreover, it turns out that the univalence axiom is largely unneeded in what follows, save for demonstrating admissibility of some additional axioms which admit much more striaghtforward computational interpretations that are (conjecturally) compatible with canonicity. I thus shall have need for univalence only as a metatheoretic assumption. Nonetheless, for expositional purposes, it is useful to define univalence formally, for which purpose I include the following submodule:
 
 ```agda
 module univalence where
@@ -305,56 +325,6 @@ postulate
 ```
 Although a full proof of canonicity is beyond the scope of this paper, I conjecture that adding these rules suffices to preserve canonicity, and I verify a few concrete cases of this conjecture later in the paper.
 
-One additional axiom concerning edge-types and edge-discreteness, which will prove useful in what follows, is that the subuniverse of edge-discrete types is an *exponential ideal*, i.e. closed under taking (dependent) function types with arbitrary domains. We can formalize this axiom, and associated computation rules, in much the same way as the axiom of connectedness of $I$, as follows:
-
-```agda
-postulate
-    edExpIdeal1 : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
-                  → ((a : A) → isEdgeDiscrete (B a))
-                  → {f g : (a : A) → B a}
-                  → (e : Edge (λ _ → (a : A) → B a) f g)
-                  → Σ (f ≡ g) (λ p → idToEdge p ≡ e)
-    edExpIdeal2 : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
-                  → (edB : (a : A) → isEdgeDiscrete (B a))
-                  → {f g : (a : A) → B a}
-                  → (e : Edge (λ _ → (a : A) → B a) f g)
-                  → (q : f ≡ g) → (r : idToEdge q ≡ e)
-                  → edExpIdeal1 edB e ≡ (q , r)
-
-edExpIdeal : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
-               → ((a : A) → isEdgeDiscrete (B a))
-               → isEdgeDiscrete ((a : A) → B a)
-edExpIdeal edB {a = f} {b = g} e =
-    (edExpIdeal1 edB {f} {g} e , 
-        λ (q , r) → edExpIdeal2 edB {f} {g} e q r)
-
-rwEDExpIdeal1 : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
-                → (edB : (a : A) → isEdgeDiscrete (B a))
-                → (f : (a : A) → B a)
-                → edExpIdeal1 edB (eabs (λ _ → f)) ≡ (refl , refl)
-rwEDExpIdeal1 edB f = edExpIdeal2 edB (eabs (λ _ → f)) refl refl
-{-# REWRITE rwEDExpIdeal1 #-}
-
-postulate
-    rwEDExpIdeal2 : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
-                    → (edB : (a : A) → isEdgeDiscrete (B a))
-                    → (f : (a : A) → B a)
-                    → edExpIdeal2 edB (eabs (λ _ → f)) refl refl ≡ refl
-    {-# REWRITE rwEDExpIdeal2 #-}
-```
-
-Note that, metatheoretically, this axiom follows as a consequence of function extensionality, which itself follows from the assumption of univalence, the idea being that if two functions ranging over a family of edge-discrete types are edge-connected, then they are also pointwise edge-connected, hence pointwise equal (by assumption) and so equal as functions, by function extensionality. Since we have assumed neither univalence nor function extensionality in this formalization, it is thus necessary to include this axiom explicitly. However, as a consequence of this axiom, we can prove function extensionality for functions ranging over edge-connected types, as follows:
-
-```agda
-edFunExt : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
-           → (edB : (a : A) → isEdgeDiscrete (B a))
-           → (f g : (a : A) → B a)
-           → ((a : A) → f a ≡ g a) → f ≡ g
-edFunExt edB f g p = 
-    mkInv idToEdge (edExpIdeal edB {f} {g})
-          (eabs (λ i → λ a → eapp (idToEdge (p a)) i))
-```
-
 So much for the (weak) connectedness of $I$; let us now turn our attention to the other property we had previously stipulated of $I$, namely its *strict bipointedness*. As mentioned previously, we could simply postulate this stipulation directly as an axiom -- however, for the purpose of proving parametricity theorems, a more prudent strategy is to instead formalize a class of $I$-indexed type families, whose computational behavior follows from this assumption (and which, in turn, implies it). Because these type families essentially correspond to the *graphs* of predicates and relations on arbitrary types, I refer to them as *graph types*.
 
 ## Graph Types
@@ -414,7 +384,7 @@ The second projection, meanwhile, may only be taken when $i$ is equal to $i_1$:
 It is straightforward to see that the inclusion of graph types makes strict bipointedness of the interval provable, as follows:
 
 ```agda
-strBpt : (i1 ≡ i0) → ⊥
+strBpt : (i0 ≡ i1) → ⊥
 strBpt p = g1snd (transp (λ i → Gph1 i ⊤ (λ _ → ⊥)) p tt)
 ```
 
@@ -531,7 +501,7 @@ And then since `A` is edge-discrete, this edge becomes an equality along which w
 
 ```
     substLemma : B (α A a)
-    substLemma = transp B (mkInv idToEdge edA lemma2) lemma1
+    substLemma = transp⁻¹ B (mkInv idToEdge edA lemma2) lemma1
 ```
 
 From this substitution lemma, it straightforwardly follows that any element of `PolyId` must be extensionally equivalent to the polymorphic identity function when evaluated at an edge-discrete type:
@@ -542,52 +512,283 @@ polyId : ∀ {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (a : A)
 polyId A edA a α = paramId.substLemma A edA (λ b → b ≡ a) a refl α
 ```
 
+Before we congratulate ourselves for proving this theorem, however, we ought to reflect on the significance of what we have proved. For we have proved *only* that the restrictions of elements of `PolyId` to edge-discrete types are equivalent to that of the polymorphic identity function. The theorem would then after all be trivial if it turned out that the only edge-discrete types were (e.g.) those containing at most one element (i.e. the *mere propositions* in the terminology of HoTT). To show that this is not the case, we make use of our assumption of *connectedness* for $I$, which we have already seen implies that every discrete type is edge-discrete. To give a concrete (non-trivial) example of this, I now show that the type of Booleans is discrete (hence edge-discrete) and use this to test the canonicity conjecture on a few simple cases:
+
+
 ```agda
 module BoolDiscrete where
-    open import Agda.Builtin.Bool
+```
 
+Showing that `Bool` is discrete is a simple matter of pattern matching
+```agda
     boolIsDisc : isDiscrete Bool
     boolIsDisc false = (con false , refl) , λ { (con false , refl) → refl}
     boolIsDisc true  = (con true  , refl) , λ { (con true , refl) → refl}
-
+```
+It follows that `Bool` is also edge-discrete and so the above parametricity theorem may be applied to it.
+```agda
     boolIsEDisc : isEdgeDiscrete Bool
     boolIsEDisc = isDisc→isEDisc boolIsDisc
 
     polyIdBool : (α : PolyId lzero) → (b : Bool) → α Bool b ≡ b
     polyIdBool α b = polyId Bool boolIsEDisc b α
-
-    shouldBeRefl : true ≡ true
-    shouldBeRefl = polyIdBool (λ X → λ x → x) true
 ```
 
-```agda
-EDPolyId : (ℓ : Level) → Set (lsuc ℓ)
-EDPolyId ℓ = (X : Set ℓ) → isEdgeDiscrete X → X → X
+We can use this to check some specific cases of that the proof of `polyId` yields a canonical form (namely `refl`) when all of its inputs are themselves canonical forms:
 
-{- edPolyId : ∀ {ℓ} → isEdgeDiscrete (EDPolyId ℓ)
-edPolyId = edExpIdeal (λ X → edExpIdeal (λ edX → edExpIdeal (λ x → edX))) -}
+```agda
+    shouldBeRefl1 : true ≡ true
+    shouldBeRefl1 = polyIdBool (λ X → λ x → x) true
+
+    shouldBeRefl2 : false ≡ false
+    shouldBeRefl2 = polyIdBool (λ X → λ x → x) false
 ```
-## Some Applications
 
-### Impredicative Encodings
+Running Agda's normalization procedure on both of these terms shows that they do indeed evaluate to `refl`.
+
+## Applications of Cohesive Parametricity
+
+The foregoing proof of parametricity for the type of the polymorphic identity function -- although theoretically significant, and illustrative of powerful techniques for proving parametricity -- remains ultimately a toy example. To illustrate the true power of this approach to parametricity, I turn now to some more intricate examples of its use, in proving universal properties for simplified presentations of inductive types, higher inductive types, and coinductive types.
+
+### Inductive Types & Higher Inductive Types
+
+In general, it is easy to write down what should be the *recursion* principle for an inductive type generated by some set of constructors, but harder (though of course feasible) to derive the corresponding *induction* principle. When one begins to consider more complex generalizations of inductive types, such as higher inductive types, inductive-inductive types, etc, however, this difficulty begins to multiply. What would be ideal would be a way of deriving the induction principle for an inductive type from its *recursor,* hence requiring only the latter to be specified as the elimination form for its corresponding type. However, in most systems of ordinary dependent type theory this is generally not possible (c.f. Geuvers).
 
 ```agda
-impredNat : (ℓ : Level) → Set (lsuc ℓ)
-impredNat ℓ = (X : Set ℓ) → (X → X) → X → X
+Recℕ : Setω
+Recℕ = ∀ {ℓ} (A : Set ℓ) → (A → A) → A → A
 
-{- module uParamNat {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (B : A → Set ℓ) 
-                     (a : A) (b : B a) 
-                     (f : A → A) (ff : (x : A) → B x → B (f x))
-                     (α : impredNat ℓ) where
-    
+postulate
+    ℕ : Set₀
+    edℕ1 : ∀ {m n : ℕ} (e : Edge (λ _ → ℕ) m n) 
+           → Σ (m ≡ n) (λ p → idToEdge p ≡ e)
+    edℕ2 : ∀ {m n : ℕ} (e : Edge (λ _ → ℕ) m n)
+           → (q : m ≡ n) (r : idToEdge q ≡ e)
+           → edℕ1 e ≡ (q , r)
+    zero : ℕ
+    succ : ℕ → ℕ
+    recℕ : ℕ → Recℕ
+    zeroβ : ∀ {ℓ} (A : Set ℓ) (f : A → A) (a : A)
+            → recℕ zero A f a ≡ a
+    {-# REWRITE zeroβ #-}
+    succβ : ∀ {ℓ} (n : ℕ) (A : Set ℓ) (f : A → A) (a : A)
+            → recℕ (succ n) A f a ≡ f (recℕ n A f a)
+    {-# REWRITE succβ #-}
+    ℕη : (n : ℕ) → recℕ n ℕ succ zero ≡ n
+    {-# REWRITE ℕη #-}
+
+edℕ : isEdgeDiscrete ℕ
+edℕ e = (edℕ1 e , λ (q , r) → edℕ2 e q r)
+
+rwEDℕ1 : (n : ℕ) → edℕ1 (eabs (λ _ → n)) ≡ (refl , refl)
+rwEDℕ1 n = edℕ2 (eabs (λ _ → n)) refl refl
+{-# REWRITE rwEDℕ1 #-}
+
+postulate
+    rwEDℕ2 : (n : ℕ) → edℕ2 (eabs (λ _ → n)) refl refl ≡ refl
+    {-# REWRITE rwEDℕ2 #-}
+
+module paramℕ {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (B : A → Set ℓ) 
+                  (f : A → A) (ff : (x : A) → B x → B (f x))
+                  (a : A) (b : B a) (α : Recℕ) where
+
     lemma0 : (i : I) → Gph1 i A B
     lemma0 i = α (Gph1 i A B)
-                 (λ g → g1pair i (f (g1fst i g))
-                                 (λ p → (transp (ff (g1fst i1 (transp -}
+                 (λ g →
+                    let g' j q = transp (λ k → Gph1 k A B) q g in
+                    g1pair i (f (g1fst i g))
+                           (λ p → 
+                              J⁻¹ (λ j q → B (f (g1fst j (g' j q)))) p
+                                  (ff (g1fst i1 (g' i1 p)) (g1snd (g' i1 p)))))
+                 (g1pair i a (λ _ → b))
+
+    lemma1 : B (g1fst i1 (lemma0 i1))
+    lemma1 = g1snd (lemma0 i1)
+
+    lemma2 : Edge (λ _ → A) (α A f a) 
+                  (g1fst i1 (lemma0 i1))
+    lemma2 = eabs (λ i → g1fst i (lemma0 i))
+
+    substLemma : B (α A f a)
+    substLemma = 
+        transp⁻¹ B (mkInv idToEdge edA lemma2) lemma1
+
+indℕ : (P : ℕ → Set)
+       → ((n : ℕ) → P n → P (succ n))
+       → P zero → (n : ℕ) → P n
+indℕ P ps pz n = 
+    paramℕ.substLemma ℕ edℕ P succ ps zero pz (recℕ n)
 ```
 
-### Modularity & Coinduction
+```agda
+ap : ∀ {ℓ κ} {A : Set ℓ} {B : Set κ} {a b : A}
+     → (f : A → B) → a ≡ b → f a ≡ f b
+ap f refl = refl
+
+apd : ∀ {ℓ κ μ} {A : Set ℓ} {B : A → Set κ} {C : Set μ}
+      → {a b : A} {aB : B a} {bB : B b}
+      → (f : (a : A) → B a → C) → (p : a ≡ b)
+      → aB ≡ transp⁻¹ B p bB → f a aB ≡ f b bB
+apd f refl refl = refl
+
+g1apd : ∀ {ℓ} {A : Set ℓ} {B : A → Set ℓ}
+        → {a b : A} {aB : B a} {bB : B b}
+        → (p : a ≡ b) → (q : aB ≡ transp⁻¹ B p bB)
+        → apd (λ x y → g1pair {B = B} i0 x (λ _ → y)) p q ≡ p
+g1apd refl refl = refl
+{-# REWRITE g1apd #-}
+
+RecS¹ : Setω
+RecS¹ = ∀ {ℓ} (A : Set ℓ) → (a : A) → a ≡ a → A
+
+postulate
+    S¹ : Set₀
+    edS¹1 : ∀ {s t : S¹} (e : Edge (λ _ → S¹) s t)
+            → Σ (s ≡ t) (λ p → idToEdge p ≡ e)
+    edS¹2 : ∀ {s t : S¹} (e : Edge (λ _ → S¹) s t)
+            → (q : s ≡ t) (r : idToEdge q ≡ e)
+            → edS¹1 e ≡ (q , r)
+    base : S¹
+    loop : base ≡ base
+    recS¹ : S¹ → RecS¹
+    baseβ : ∀ {ℓ} (A : Set ℓ) (a : A) (l : a ≡ a)
+            → recS¹ base A a l ≡ a
+    {-# REWRITE baseβ #-}
+    loopβ : ∀ {ℓ} (A : Set ℓ) (a : A) (l : a ≡ a)
+            → ap (λ s → recS¹ s A a l) loop ≡ l
+    {-# REWRITE loopβ #-}
+    S¹η : (s : S¹) → recS¹ s S¹ base loop ≡ s
+    {-# REWRITE S¹η #-}
+
+edS¹ : isEdgeDiscrete S¹
+edS¹ e = (edS¹1 e , λ (q , r) → edS¹2 e q r)
+
+rwEDS¹1 : (s : S¹) → edS¹1 (eabs (λ _ → s)) ≡ (refl , refl)
+rwEDS¹1 s = edS¹2 (eabs (λ _ → s)) refl refl
+{-# REWRITE rwEDS¹1 #-}
+
+postulate
+    rwEDS¹2 : (s : S¹) → edS¹2 (eabs (λ _ → s)) refl refl ≡ refl
+    {-# REWRITE rwEDS¹2 #-}
+
+module paramS¹ {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (B : A → Set ℓ) 
+               (a : A) (b : B a) (l : a ≡ a)
+               (lB : b ≡ transp⁻¹ B l b) (α : RecS¹) where
+
+    lemma0 : (i : I) → Gph1 i A B
+    lemma0 i = α (Gph1 i A B)
+                 (g1pair i a (λ _ → b))
+                 (apd (λ a b → g1pair i a (λ _ → b)) l lB)
+
+    lemma1 : B (g1fst i1 (lemma0 i1))
+    lemma1 = g1snd (lemma0 i1)
+
+    lemma2 : Edge (λ _ → A) (α A a l) 
+                  (g1fst i1 (lemma0 i1))
+    lemma2 = eabs (λ i → g1fst i (lemma0 i))
+
+    substLemma : B (α A a l)
+    substLemma = 
+        transp⁻¹ B (mkInv idToEdge edA lemma2) lemma1
+
+indS¹ : (P : S¹ → Set)
+        → (pb : P base) → pb ≡ transp⁻¹ P loop pb
+        → (s : S¹) → P s
+indS¹ P pb pl s = 
+    paramS¹.substLemma S¹ edS¹ P base pb loop pl (recS¹ s)
+```
+### Modularity & Coinductive Types
+
+```agda
+∃ : ∀ {ℓ κ} (A : Set ℓ) (B : A → Set κ) → Setω
+∃ A B = ∀ {ℓ} (C : Set ℓ) → ((a : A) → B a → C) → C
+
+∃pair : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
+        → (a : A) → B a → ∃ A B
+∃pair a b = λ C → λ c → c a b
+
+modularity : ∀ {ℓ κ μ} (X Y : Set ℓ) (F : Set ℓ → Set κ)
+             → (fx : F X) (fy : F Y) (R : X → Y → Set ℓ)
+             → (Edge (λ i → F (Gph2 i i X Y R)) fx fy)
+             → (C : Set μ) → isEdgeDiscrete C
+             → (c : (Z : Set ℓ) → F Z → C)
+             → ∃pair X fx C c ≡ ∃pair Y fy C c
+modularity X Y F fx fy R e C edC c = 
+    mkInv idToEdge edC 
+          (eabs (λ i → ∃pair (Gph2 i i X Y R) (eapp e i) C c))
+
+postulate
+    ℕ∞ : Set₀
+    edℕ∞1 : ∀ {m n : ℕ∞} (e : Edge (λ _ → ℕ∞) m n) 
+            → Σ (m ≡ n) (λ p → idToEdge p ≡ e)
+    edℕ∞2 : ∀ {m n : ℕ∞} (e : Edge (λ _ → ℕ∞) m n)
+            → (q : m ≡ n) (r : idToEdge q ≡ e)
+            → edℕ∞1 e ≡ (q , r)
+    isZero : ℕ∞ → Bool
+    pred : (n : ℕ∞) → (isZero n ≡ false) → ℕ∞
+    corecℕ∞ : (X : Set₀) 
+              → (isz : X → Bool) 
+              → ((x : X) → isz x ≡ false → X)
+              → X → ℕ∞
+    isZeroβ : (X : Set₀) 
+              → (isz : X → Bool)
+              → (pr : (x : X) → isz x ≡ false → X)
+              → (x : X) →  isZero (corecℕ∞ X isz pr x) ≡ isz x
+    {-# REWRITE isZeroβ #-}
+    predβ : (X : Set₀) 
+            → (isz : X → Bool)
+            → (pr : (x : X) → isz x ≡ false → X)
+            → (x : X) → (p : isz x ≡ false)
+            → pred (corecℕ∞ X isz pr x) p ≡ corecℕ∞ X isz pr (pr x p)
+    {-# REWRITE predβ #-}
+    ℕ∞η : (n : ℕ∞) → corecℕ∞ ℕ∞ isZero pred n ≡ n
+    {-# REWRITE ℕ∞η #-}
+
+edℕ∞ : isEdgeDiscrete ℕ∞
+edℕ∞ e = (edℕ∞1 e , λ (q , r) → edℕ∞2 e q r)
+
+rwEDℕ∞1 : (n : ℕ∞) → edℕ∞1 (eabs (λ _ → n)) ≡ (refl , refl)
+rwEDℕ∞1 n = edℕ∞2 (eabs (λ _ → n)) refl refl
+{-# REWRITE rwEDℕ∞1 #-}
+
+postulate
+    rwEDℕ∞2 : (n : ℕ∞) → edℕ∞2 (eabs (λ _ → n)) refl refl ≡ refl
+    {-# REWRITE rwEDℕ∞2 #-}
+
+bisimℕ∞ : (X : Set₀) (Y : Set₀) 
+          → (iszX : X → Bool) (iszY : Y → Bool)
+          → (prX : (x : X) → iszX x ≡ false → X)
+          → (prY : (y : Y) → iszY y ≡ false → Y)
+          → (X → Y → Set) → Set
+bisimℕ∞ X Y iszX iszY prX prY R =
+    Σ ((x : X) (y : Y) → R x y → iszX x ≡ iszY y)
+      (λ p → (x : X) (y : Y) 
+             → (r : R x y) 
+             → (q : iszX x ≡ false)
+             → R (prX x q) 
+                 (prY y (transp (λ b → b ≡ false) 
+                                (p x y r) q)))
+
+Coalgℕ∞ : Set₀ → Set₀
+Coalgℕ∞ X = 
+    Σ X (λ _ → Σ (X → Bool) (λ f → (x : X) → f x ≡ false → X))
+
+bisimℕ∞→Edge : (X : Set₀) (Y : Set₀)
+               → (iszX : X → Bool) (iszY : Y → Bool)
+               → (prX : (x : X) → iszX x ≡ false → X)
+               → (prY : (y : Y) → iszY y ≡ false → Y)
+               → (R : X → Y → Set ℓ) 
+               → bisimℕ∞ X Y iszX iszY prX prY R
+               → (x : X) (y : Y) (r : R x y) 
+               → (i j : I) → Coalgℕ∞ (Gph2 i j X Y R)
+bisimℕ∞→Edge X Y x y iszX iszY prX prY R x y r (p , pr) i j =
+    (g2triple i j (λ _ → x) (λ _ → y) (λ _ → r) ,
+        (λ g →  , ))
+
+```
 
 # Toward a synthetic theory of parametricity
+
+Parametricity is *the* tool for the job of tackling coherence problems.
 
 ## Acknowledgements
