@@ -29,6 +29,7 @@ module parametricity-via-cohesion where
     
 open import Agda.Primitive
 open import Data.Empty
+open import Agda.Builtin.Unit
 open import Agda.Builtin.Sigma
 open import Agda.Builtin.Equality
 open import Agda.Builtin.Equality.Rewrite
@@ -89,7 +90,7 @@ Similarly, the notion of *equivalence* expresses the idea that a function betwee
 open hott
 ```
 
-The reader familiar with HoTT may note that, so far, we have not included anything related to the characteristic axiom of HoTT, namely Voevodsky's *univalence axiom*. In fact, this is by design, as this axiom is largely unneeded in what follows, save for an incidental lemma to prove admissibility of another axiom. I thus postulate univalence in a separate module, which will only be used in this latter proof:
+The reader familiar with HoTT may note that, so far, we have not included anything relating to the *univalence axiom*, arguably the characteristic axiom of HoTT. In fact, this is by design, as a goal of the current formalization is to assume only axioms that can be given straightforward computational interpretations that preserve the property that every term of the ambient type theory evaluates to a *canonical normal form* (canonicity), so that these axioms give a *constructive* and *computationally sound* interpretation of parametricity. While the univalence axiom *can* be given a computational interpretation compatible with canonicity, as in Cubical Type Theory, doing so is decidedly *not* a straightforward matter. Moreover, it turns out that the univalence axiom is largely unneeded in what follows, save for demonstrating admissibility of some additional axioms which admit much more striaghtforward computational interpretations that are (conjecturally) compatible with canonicity. I thus shall have need for univalence only as a metatheoretic assumption. Nonetheless, for expositional purposes, it is useful to define univalence formally, for which purpose I include the following submodule:
 
 ```agda
 module univalence where
@@ -109,6 +110,8 @@ The univalence axiom asserts that this map is itself an equivalence:
     postulate
         axiom : ∀ {ℓ} {A B : Set ℓ} → isEquiv (idToEquiv A B)
 ```
+
+Intuitively, univalence allows us to convert equivalences between types into *identifications* of those types, which may then be transported over accordingly.
 
 Having defined some essential structures of the language of HoTT, we may now proceed to similarly define some essential structures of the language of HoTT *with cohesive modalities*. 
 ```agda
@@ -192,7 +195,7 @@ Hence the property of $I$ being weakly connected is just as much a particular *r
 
 In order to conveniently express this property in Agda, it shall therefore be prudent first to introduce some additional constructs for ergonomically handling edges, analogous to the definition of *path* types in Cubical type theory. For this purpose, I now introduce a corresponding notion of *edge types*.
 
-## Edge Types and Connectedness
+## Edge Types
 
 In principle, given $a,b : A$, we could define the type of edges from $a$ to $b$ in $A$ as the type $Σ f : I → A . (f ~ i_0 = a) \times (f ~ i_1 = b)$. However, experience with such a naïve formalization shows that it incurs a high number of laborious transportations along equalities that should be easy enough to infer automatically. Hence I instead follow the approach taken by cubical type theory and related systems, such as simplicial type theory, and give an explicit axiomatization for *edge types*, with corresponding rewrite rules to apply the associated equalities automatically:
 
@@ -221,6 +224,8 @@ We may then postulate the usual $\beta$-law as an identity for this type, along 
             → (e : Edge A a0 a1) → eapp e i1 ≡ a1
     {-# REWRITE eapp1 #-}
 ```
+
+(We could additionally postulate an $\eta$-law for edge types, analogous to the usual $\eta$-law for function types; however, this is unnecessary for what follows, and so I omit this assumption.)
 
 With this formalization of edge types in hand, we can straightforwardly formalize the equivalent formulation of weak connectedness of $I$ given above. For this purpose, we first define the map `idToEdge` that takes an identification $a ≡ b$ to an edge from $a$ to $b$:
 
@@ -258,9 +263,91 @@ isDisc→isEDisc dA e =
     (edgeConst1 dA e , λ (p , q) → edgeConst2 dA e p q)
 ```
 
-## Graph Types and Strict Bipointedness of the Interval
+As it stands, we have not yet given a procedure for evaluating the axioms `edgeConst1` and `edgeConst2` when they are applied to canonical forms, which means that computation on these terms will generally get stuck and thus violate canonicity. Toward rectifying this, I prove a key identity regarding these axioms, add a further postulate asserting that this identity is equal to `refl`, and convert both of these to rewrite rules:
 
-## Parametricity via Cohesion
+```agda
+rwEdgeConst1 : ∀ {@♭ ℓ : Level} {@♭ A : Set ℓ} {a : A}
+               → (dA : isDiscrete A) 
+               → edgeConst1 dA (eabs (λ _ → a)) ≡ (refl , refl)
+rwEdgeConst1 {a = a} dA = edgeConst2 dA (eabs (λ _ → a)) refl refl
+{-# REWRITE rwEdgeConst1 #-}
+
+postulate
+    rwEdgeConst2 : ∀ {@♭ ℓ : Level} {@♭ A : Set ℓ} {a : A}
+                   → (dA : isDiscrete A)
+                   → edgeConst2 dA (eabs (λ _ → a)) refl refl ≡ refl
+    {-# REWRITE rwEdgeConst2 #-}
+```
+Although a full proof of canonicity is beyond the scope of this paper, I conjecture that adding these rules suffices to preserve canonicity, and I verify a few concrete cases of this conjecture later in the paper.
+
+So much for the (weak) connectedness of $I$; let us now turn our attention to the other property we had previously stipulated of $I$, namely its *strict bipointedness*. As mentioned previously, we could simply postulate this stipulation directly as an axiom -- however, for the purpose of proving parametricity theorems, a more prudent strategy is to instead formalize a class of $I$-indexed type families, whose computational behavior follows from this assumption (and which, in turn, implies it). Because these type families essentially correspond to the *graphs* of predicates and relations on arbitrary types, I refer to them as *graph types*.
+
+## Graph Types
+
+I begin with an exposition of the simplest class of graph types: *unary graph types*, which, as the name would imply, correspond to graphs of unary predicates. Given a type $A$, a type family $B : A → \mathsf{Type}$, and an element $i : I$, the *graph type* $\mathsf{Gph}^1 ~ i ~ A ~ B$ is defined to be equal to $A$ when $i$ is $i_0$, and equivalent to $Σ x : A . B x$ when $i$ is $i_1$. Intuitively, an element of $\mathsf{Gph}^1 ~ i ~ A ~ B$ is a dependent pair whose second element *only exists when $i$ is equal to $i_1$*. We may formalize this in Agda as follows, by postulating a rewrite rule that evaluates $\mathsf{Gph}^1 ~ i_0 ~ A ~ B$ to $A$:
+
+```agda
+postulate
+    Gph1 : ∀ {ℓ} (i : I) (A : Set ℓ) (B : A → Set ℓ) → Set (ℓ)
+
+    g1rw0 : ∀ {ℓ} (A : Set ℓ) (B : A → Set ℓ)
+            → Gph1 i0 A B ≡ A
+    {-# REWRITE g1rw0 #-}
+```
+
+We then have the following introduction rule for elements of $\mathsf{Gph}^1 ~ i ~ A ~ B$, which are pairs where the second element of the pair only exists under the assumption that $i = i_1$. When $i = i_0$ instead, the pair collapses to its first element:
+
+```agda
+    g1pair : ∀ {ℓ} {A : Set ℓ} {B : A → Set ℓ} (i : I)
+             → (a : A) → (b : (i ≡ i1) → B a) → Gph1 i A B
+
+    g1pair0 : ∀ {ℓ} {A : Set ℓ} {B : A → Set ℓ}
+              → (a : A) → (b : (i0 ≡ i1) → B a)
+              → g1pair {B = B} i0 a b ≡ a
+    {-# REWRITE g1pair0 #-}
+```
+
+The first projection from such a pair may then be taken no matter what $i$ is, and reduces to the identity function when $i$ is $i_0$:
+
+```agda
+    g1fst : ∀ {ℓ} {A : Set ℓ} {B : A → Set ℓ} (i : I)
+            → (g : Gph1 i A B) → A
+    
+    g1beta1 : ∀ {ℓ} {A : Set ℓ} {B : A → Set ℓ} (i : I)
+              → (a : A) → (b : (i ≡ i1) → B a)
+              → g1fst i (g1pair {B = B} i a b) ≡ a
+    {-# REWRITE g1beta1 #-}
+    
+    g1fst0 : ∀ {ℓ} {A : Set ℓ} {B : A → Set ℓ}
+             → (g : Gph1 i0 A B)
+             → g1fst {B = B} i0 g ≡ g
+    {-# REWRITE g1fst0 #-}
+```
+
+The second projection, meanwhile, may only be taken when $i$ is equal to $i_1$:
+
+```agda
+    g1snd : ∀ {ℓ} {A : Set ℓ} {B : A → Set ℓ}
+            → (g : Gph1 i1 A B) → B (g1fst i1 g)
+    
+    g1beta2 : ∀ {ℓ} {A : Set ℓ} {B : A → Set ℓ}
+              → (a : A) → (b : (i1 ≡ i1) → B a)
+              → g1snd (g1pair {B = B} i1 a b) ≡ b refl
+    {-# REWRITE g1beta2 #-}
+```
+
+It is straightforward to see that the inclusion of graph types makes strict bipointedness of the interval provable, as follows:
+
+```agda
+strBpt : (i1 ≡ i0) → ⊥
+strBpt p = g1snd (transp (λ i → Gph1 i ⊤ (λ _ → ⊥)) p tt)
+```
+
+And in fact, the converse holds under the assumption of univalence. Specifically, in the presence of univalence and the assumption of strict bipointedness for $I$, the type $\mathsf{Gph}^1 ~ i ~ A ~ B$ may be regarded as a computationally convenient shorthand for the type $\Sigma x : A . (i = i_1) → B x$, in much the same way as the type $\mathsf{Edge} ~ A ~ a_0 ~ a_1$ serves as shorthand for the type $\Sigma f : (\Pi i : I . A i) . (f ~ i_0 = a_0) \times (f ~ i_1 = a_1)$. This fact is due to the following equivalence $$\begin{array}{rl} &\Sigma x : A . (i_0 = i_1) \to B x\\ \simeq & \Sigma x : A . \bot \to B x\\ \simeq & \Sigma x : A . \top \\ \simeq & A \end{array}$$ which, under univalence, becomes an identity between $\Sigma x : A . (i_0 = i_1) \to B x$ and $A$, thereby justifying the use of this and associated identities as rewrite rules which, conjecturally, are fully compatible with canonictiy.
+
+In addition to unary graph types, we also have *binary* graphs types for representing graphs of binary relations. That is, given types $A,B$, a type family $C : A \to B \to \mathsf{Type}$, and elements $i,j : I$, there is a type $\mathsf{Gph}^2 ~ i ~ j ~ A ~ B ~ C$. Intuitively, $\mathsf{Gph}^2 ~ i ~ j ~ A ~ B ~ C$ is a type of dependent triples whose first element (of type $A$) exists only under the assumption that $i = i_0$, whose second element exists only under the assumption that $j = i_1$, and whose third element, which may depend upon the first and second, exists only under the conjunction of these assumptions. Hence $\mathsf{Gph}^2 ~ i_0 ~ i_0 ~ A ~ B ~ C$ is equal to $A$ while $\mathsf{Gph}^2 ~ i_1 ~ i_1 ~ A ~ B ~ C$ is equal to $B$. This intuitive description is formalized in the following rules, which are entirely analogous to those for unary graph types:
+
+## Parametricity via Sufficient Cohesion
 
 ## Some Applications
 
