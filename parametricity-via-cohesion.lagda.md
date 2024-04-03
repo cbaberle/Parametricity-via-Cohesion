@@ -23,6 +23,7 @@ header-includes:
     - \newunicodechar{₀}{\ensuremath{\mathnormal{_0}}}
     - \newunicodechar{⊥}{\ensuremath{\mathnormal\bot}}
     - \newunicodechar{⊤}{\ensuremath{\mathnormal\top}}
+    - \newunicodechar{α}{\ensuremath{\mathnormal\alpha}}
     - \usepackage{fourier}
     - \usepackage{cochineal}
     - \DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}
@@ -428,9 +429,44 @@ postulate
     {-# REWRITE g2beta3 #-}
 ```
 
-In principle, we could continue in this manner, and define graph types for relations of any arity. However, for present purposes, unary and binary graph types are sufficient.
+In principle, we could continue in this manner, and define graph types for relations of any arity. However, for present purposes, unary and binary graph types are sufficient. The former are useful for proving theorems to do with *unary parametricity*, while the latter play a similar role in theorems based on *binary parametricity*. Speaking of which, having given appropriate axioms (and corresponding computation rules) to capture the desiderata that $I$ be strictly bipointed and weakly connected, we are finally in a position to prove some classical parametricity theorems using this structure.
 
 ## Parametricity via Sufficient Cohesion
+
+I begin this section with an old chestnut of parametricity theorems -- a proof that any *polymorphic function* of type `(X : Set) → X → X` must be equivalent to the polymorphic identity function `λ X → λ x → x`. 
+
+```agda
+PolyId : (ℓ : Level) → Set (lsuc ℓ)
+PolyId ℓ = (X : Set ℓ) → X → X
+```
+
+Before proceeding with this proof, however, it will be prudent to consider the *meaning* of this theorem in the context of the cohesive type theory we have so-far developed. Specifically, I wish to ask: over which types should the type variable `X` in the type `(X : Set) → X → X` be considered as ranging in the statement of this theorem? Although it is tempting to think that the answer to this question should be "all types" (or as close to this as one can get predicatively), if one considers the relation between our cohesive setup and Reynolds' original setup of parametricity, a subtler picture emerges. A type, in our framework, corresponds not to a type in the object language of e.g. bare sets, but rather to an object of the cohesive topos used to interpret the parametric structure of this object language, e.g. the category of reflexive graphs. In this sense, we should expect the parametricity result for the type `(X : Set) → X → X` to generally hold only for those types corresponding to those in the object language, i.e. the *discrete types*. Indeed, the discrete types by construction are those which cannot distinguish elements of other types belonging to the same connected component, which intuitively captures the essential idea of parametricity -- that functions defined over these types must behave essentially the same for related inputs.
+
+However, we cannot state this formulation of the theorem directly, since it would require us to bind $X$ as `@♭ X : Set`, which would kill all of the cohesive structure on `Set` and pose no restriction on the functions inhabiting this type. The solution, in this case, is to restrict the range of `X` to types which are *edge-discrete*, since this requirement can be stated even for `X` not crisp.
+
+The overall strategy of this proof is to 
+
+```agda
+module paramId {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (B : A → Set ℓ) 
+                   (a : A) (b : B a) (α : PolyId ℓ) where
+
+    lemma1 : B (g1fst i1 (α (Gph1 i1 A B) (g1pair i1 a (λ _ → b))))
+    lemma1 = g1snd (α (Gph1 i1 A B) (g1pair i1 a (λ _ → b)))
+
+    lemma2 : Edge (λ _ → A) 
+                  (α A a) 
+                  (g1fst i1 (α (Gph1 i1 A B) (g1pair i1 a (λ _ → b))))
+    lemma2 = eabs (λ i → g1fst i (α (Gph1 i A B) (g1pair i a (λ _ → b))))
+
+    lemma3 : B (α A a)
+    lemma3 = transp B (mkInv idToEdge edA lemma2) lemma1
+```
+
+```agda
+polyId : ∀ {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (a : A)
+         → (α : PolyId ℓ) → α A a ≡ a
+polyId A edA a α = paramId.lemma3 A edA (λ b → b ≡ a) a refl α
+```
 
 ## Some Applications
 
