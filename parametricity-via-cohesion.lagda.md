@@ -98,7 +98,7 @@ First of all, we have the induction principle for the identity type, aka the `J`
     J B refl b = b
 ```
 
-As an immediate corollary of this, we obtain the operation of *tranport*:
+As an immediate corollary of this, we obtain the operation of *tranport* as the recursor for the identity type:
 ```agda
     transp : ∀ {ℓ κ} {A : Set ℓ} {a b : A} 
              → (B : A → Set κ) → (a ≡ b) → B a → B b
@@ -115,7 +115,14 @@ Additionally, both `J` and `transp` are symmetric, and so can be applied "in the
                → (B : A → Set κ) → (a ≡ b) → B b → B a
     transp⁻¹ B p b = J⁻¹ (λ a _ → B a) p b
 ```
-The notion of *contractibility* expresses the idea that a type is essentially uniquely inhabited.
+Since all functions must preserve relations of identity, we may apply a function to both sides of an identification as follows:
+```agda
+    ap : ∀ {ℓ κ} {A : Set ℓ} {B : Set κ} {a b : A}
+         → (f : A → B) → a ≡ b → f a ≡ f b
+    ap f refl = refl
+```
+
+The notion of *contractibility* then expresses the idea that a type is essentially uniquely inhabited.
 ```agda
     isContr : ∀ {ℓ} (A : Set ℓ) → Set ℓ
     isContr A = Σ A (λ a → (b : A) → a ≡ b)
@@ -221,7 +228,7 @@ On the other hand, we do not yet have the capability to postulate the axiom of c
 
 > A crisp type $A$ is connected if and only if, for every *discrete* type $B$, any function $A \to B$ is essentially constant, in the sense of factoring through a contractible type.
 
-To see that this equivalence holds: in one direction, assume that $A$ is weakly connected. Then for any map $f : A \to B$, by the adjunction $\smallint \dashv \flat$ and discreteness of $B$, there exist maps $f_\flat : A \to \flat B$ and $f^\smallint : \smallint A \to B$, such that following commuting diagram commutes: $$
+To see that this equivalence holds: in one direction, assume that $A$ is weakly connected. Then for any map $f : A \to B$, by the adjunction $\smallint \dashv \flat$ and discreteness of $B$, there exist maps $f_\flat : A \to \flat B$ and $f^\smallint : \smallint A \to B$, such that following diagram commutes: $$
 \begin{tikzcd}
 	{A} & {\smallint A} \\
 	{\flat B} & B
@@ -329,7 +336,7 @@ So much for the (weak) connectedness of $I$; let us now turn our attention to th
 
 ## Graph Types
 
-I begin with an exposition of the simplest class of graph types: *unary graph types*, which, as the name would imply, correspond to graphs of unary predicates. Given a type $A$, a type family $B : A \to \mathsf{Type}$, and an element $i : I$, the *graph type* $\mathsf{Gph}^1 ~ i ~ A ~ B$ is defined to be equal to $A$ when $i$ is $i_0$, and equivalent to $\Sigma x : A . B x$ when $i$ is $i_1$. Intuitively, an element of $\mathsf{Gph}^1 ~ i ~ A ~ B$ is a dependent pair whose second element *only exists when $i$ is equal to $i_1$*. We may formalize this in Agda as follows, by postulating a rewrite rule that evaluates $\mathsf{Gph}^1 ~ i_0 ~ A ~ B$ to $A$:
+For present purposes, we need only concern ourselves with the simplest class of graph types: *unary graph types*, which, as the name would imply, correspond to graphs of unary predicates. Given a type $A$, a type family $B : A \to \mathsf{Type}$, and an element $i : I$, the *graph type* $\mathsf{Gph}^1 ~ i ~ A ~ B$ is defined to be equal to $A$ when $i$ is $i_0$, and equivalent to $\Sigma x : A . B x$ when $i$ is $i_1$. Intuitively, an element of $\mathsf{Gph}^1 ~ i ~ A ~ B$ is a dependent pair whose second element *only exists when $i$ is equal to $i_1$*. We may formalize this in Agda as follows, by postulating a rewrite rule that evaluates $\mathsf{Gph}^1 ~ i_0 ~ A ~ B$ to $A$:
 
 ```agda
 postulate
@@ -390,66 +397,24 @@ strBpt p = g1snd (transp (λ i → Gph1 i ⊤ (λ _ → ⊥)) p tt)
 
 And in fact, the converse holds under the assumption of univalence. Specifically, in the presence of univalence and the assumption of strict bipointedness for $I$, the type $\mathsf{Gph}^1 ~ i ~ A ~ B$ may be regarded as a computationally convenient shorthand for the type $\Sigma x : A . (i = i_1) \to B x$, in much the same way as the type $\mathsf{Edge} ~ A ~ a_0 ~ a_1$ serves as shorthand for the type $\Sigma f : (\Pi i : I . A i) . (f ~ i_0 = a_0) \times (f ~ i_1 = a_1)$. This fact is due to the following equivalence $$\begin{array}{rl} &\Sigma x : A . (i_0 = i_1) \to B x\\ \simeq & \Sigma x : A . \bot \to B x\\ \simeq & \Sigma x : A . \top \\ \simeq & A \end{array}$$ which, under univalence, becomes an identity between $\Sigma x : A . (i_0 = i_1) \to B x$ and $A$, thereby justifying the use of this and associated identities as rewrite rules which, conjecturally, are fully compatible with canonictiy.
 
-In addition to unary graph types, we also have *binary* graphs types for representing graphs of binary relations. That is, given types $A,B$, a type family $C : A \to B \to \mathsf{Type}$, and elements $i,j : I$, there is a type $\mathsf{Gph}^2 ~ i ~ j ~ A ~ B ~ C$. Intuitively, $\mathsf{Gph}^2 ~ i ~ j ~ A ~ B ~ C$ is a type of dependent triples whose first element (of type $A$) exists only under the assumption that $i = i_0$, whose second element exists only under the assumption that $j = i_1$, and whose third element, which may depend upon the first and second, exists only under the conjunction of these assumptions. Hence $\mathsf{Gph}^2 ~ i_0 ~ i_0 ~ A ~ B ~ C$ is equal to $A$ while $\mathsf{Gph}^2 ~ i_1 ~ i_1 ~ A ~ B ~ C$ is equal to $B$. This intuitive description is formalized in the following rules, which are entirely analogous to those for unary graph types:
+A few additional theorems, concerning identities between elements of graph types, are as follows, the latter of which I make into a rewrite rule for convenience:
 
 ```agda
-postulate
-    Gph2 : ∀ {ℓ} (i j : I) (A : Set ℓ) (B : Set ℓ)
-           → (C : A → B → Set ℓ) → Set ℓ
-    g2rw00 : ∀ {ℓ} (A : Set ℓ) (B : Set ℓ) (C : A → B → Set ℓ) 
-             → Gph2 i0 i0 A B C ≡ A
-    {-# REWRITE g2rw00 #-}
-    g2rw11 : ∀ {ℓ} (A : Set ℓ) (B : Set ℓ) (C : A → B → Set ℓ) 
-             → Gph2 i1 i1 A B C ≡ B
-    {-# REWRITE g2rw11 #-}
+apg1pair : ∀ {ℓ} {A : Set ℓ} {B : A → Set ℓ}
+           → {a b : A} {aB : B a} {bB : B b} 
+           → (p : a ≡ b) → aB ≡ transp⁻¹ B p bB 
+           → (i : I) → g1pair i a (λ _ → aB) ≡ g1pair i b (λ _ → bB)
+apg1pair refl refl i = refl
 
-    g2triple : ∀ {ℓ} (i j : I) {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
-               → (a : (i ≡ i0) → A) → (b : (j ≡ i1) → B)
-               → (c : (p : i ≡ i0) (q : j ≡ i1) → C (a p) (b q))
-               → Gph2 i j A B C
-    g2triple00 : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
-                 → (a : (i0 ≡ i0) → A) → (b : (i0 ≡ i1) → B)
-                 → (c : (p : i0 ≡ i0) (q : i0 ≡ i1) → C (a p) (b q))
-                 → g2triple i0 i0 {C = C} a b c ≡ a refl
-    {-# REWRITE g2triple00 #-}
-    g2triple11 : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
-                 → (a : (i1 ≡ i0) → A) → (b : (i1 ≡ i1) → B)
-                 → (c : (p : i1 ≡ i0) (q : i1 ≡ i1) → C (a p) (b q))
-                 → g2triple i1 i1 {C = C} a b c ≡ b refl
-    {-# REWRITE g2triple11 #-}
-
-    g2fst : ∀ {ℓ} (j : I) {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
-            → Gph2 i0 j A B C → A
-    g2beta1 : ∀ {ℓ} (j : I) {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
-              → (a : (i0 ≡ i0) → A) → (b : (j ≡ i1) → B)
-              → (c : (p : i0 ≡ i0) (q : j ≡ i1) → C (a p) (b q))
-              → g2fst j (g2triple i0 j {C = C} a b c) ≡ a refl
-    {-# REWRITE g2beta1 #-}
-    g2fst00 : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
-              → (g : Gph2 i0 i0 A B C) → g2fst i0 {B = B} {C = C} g ≡ g
-    {-# REWRITE g2fst00 #-}
-
-    g2snd : ∀ {ℓ} (i : I) {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
-            → Gph2 i i1 A B C → B
-    g2beta2 : ∀ {ℓ} (i : I) {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
-              → (a : (i ≡ i0) → A) → (b : (i1 ≡ i1) → B)
-              → (c : (p : i ≡ i0) (q : i1 ≡ i1) → C (a p) (b q))
-              → g2snd i (g2triple i i1 {C = C} a b c) ≡ b refl
-    {-# REWRITE g2beta2 #-}
-    g2snd11 : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
-              → (g : Gph2 i1 i1 A B C) → g2snd i1 {A = A} {C = C} g ≡ g
-    {-# REWRITE g2snd11 #-}
-
-    g2thrd : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
-             → (g : Gph2 i0 i1 A B C) → C (g2fst i1 g) (g2snd i0 g)
-    g2beta3 : ∀ {ℓ} {A : Set ℓ} {B : Set ℓ} {C : A → B → Set ℓ}
-              → (a : (i0 ≡ i0) → A) → (b : (i1 ≡ i1) → B)
-              → (c : (p : i0 ≡ i0) (q : i1 ≡ i1) → C (a p) (b q))
-              → g2thrd (g2triple i0 i1 {C = C} a b c) ≡ c refl refl
-    {-# REWRITE g2beta3 #-}
+apg1pair0 : ∀ {ℓ} {A : Set ℓ} {B : A → Set ℓ}
+            → {a b : A} {aB : B a} {bB : B b}
+            → (p : a ≡ b) → (q : aB ≡ transp⁻¹ B p bB)
+            → apg1pair p q i0 ≡ p
+apg1pair0 refl refl = refl
+{-# REWRITE apg1pair0 #-}
 ```
 
-In principle, we could continue in this manner, and define graph types for relations of any arity. However, for present purposes, unary and binary graph types are sufficient. The former are useful for proving theorems to do with *unary parametricity*, while the latter play a similar role in theorems based on *binary parametricity*. Speaking of which, having given appropriate axioms (and corresponding computation rules) to capture the desiderata that $I$ be strictly bipointed and weakly connected, we are finally in a position to prove some classical parametricity theorems using this structure.
+In principle, we could continue in this manner, and define graph types for relations of arities greater than 1 as well. However, unary graph types are sufficient for what is to follow. Speaking of which, having given appropriate axioms (and corresponding computation rules) to capture the desiderata that $I$ be strictly bipointed and weakly connected, we are now in a position to prove some classical parametricity theorems using this structure.
 
 ## Parametricity via Sufficient Cohesion
 
@@ -546,25 +511,24 @@ We can use this to check some specific cases of that the proof of `polyId` yield
 
 Running Agda's normalization procedure on both of these terms shows that they do indeed evaluate to `refl`.
 
-## Applications of Cohesive Parametricity
+## Parametricity & (Higher) Inductive Types 
 
-The foregoing proof of parametricity for the type of the polymorphic identity function -- although theoretically significant, and illustrative of powerful techniques for proving parametricity -- remains ultimately a toy example. To illustrate the true power of this approach to parametricity, I turn now to some more intricate examples of its use, in proving universal properties for simplified presentations of inductive types, higher inductive types, and coinductive types.
+The foregoing proof of parametricity for the type of the polymorphic identity function -- although theoretically significant, and illustrative of powerful techniques for proving parametricity -- remains ultimately a toy example. To demonstrate the true power of this approach to parametricity, I turn now to some more intricate examples of its use, in proving universal properties for simplified presentations of inductive types and higher inductive types.
 
-### Inductive Types & Higher Inductive Types
+In general, it is easy to write down what should be the *recursion* principle for an inductive type generated by some set of constructors, but harder (though feasible) to derive the corresponding *induction* principle. When one begins to consider more complex generalizations of inductive types, such as higher inductive types, inductive-inductive types, etc, however, these difficulties begin to multiply. What would be ideal would be a way of deriving the induction principle for an inductive type from its *recursor,* hence requiring only the latter to be specified as part of the primitive data of the inductive type. However, in most systems of ordinary dependent type theory this is generally not possible (c.f. Geuvers). In HoTT, there is one way around this issue, due to Awodey, Frey & Speight, whereby additional *naturality* constraints are imposed upon the would-be inductive type, that serve to make the corresponding induction principle derivable from the recursor. However, when one goes on to apply this technique to *higher-inductive types,* which may specify constructors not only for *elements* of a type, but also for instances of its (higher) identity types, the complexity of these naturality conditions renders them impractical to work with. The ballooning complexity of these conditions is an instance of the infamous *coherence problem* in HoTT, whereby the complexity of coherence conditions for higher-categorical structures seemingly escapes any simple inductive definition.
 
-In general, it is easy to write down what should be the *recursion* principle for an inductive type generated by some set of constructors, but harder (though of course feasible) to derive the corresponding *induction* principle. When one begins to consider more complex generalizations of inductive types, such as higher inductive types, inductive-inductive types, etc, however, this difficulty begins to multiply. What would be ideal would be a way of deriving the induction principle for an inductive type from its *recursor,* hence requiring only the latter to be specified as the elimination form for its corresponding type. However, in most systems of ordinary dependent type theory this is generally not possible (c.f. Geuvers).
+As an alternative, let us consider ways of using *parametricity* to derive induction principles for inductive and higher inductive types, starting with the prototypical inductive type, the natural numbers $\mathbb{N}$.
+
+First, we define the type of the recursor for $\mathbb{N}$:
 
 ```agda
 Recℕ : Setω
 Recℕ = ∀ {ℓ} (A : Set ℓ) → (A → A) → A → A
-
+```
+We may then postulate the usual constructors and identities for $\mathbb{N}$
+```agda
 postulate
     ℕ : Set₀
-    edℕ1 : ∀ {m n : ℕ} (e : Edge (λ _ → ℕ) m n) 
-           → Σ (m ≡ n) (λ p → idToEdge p ≡ e)
-    edℕ2 : ∀ {m n : ℕ} (e : Edge (λ _ → ℕ) m n)
-           → (q : m ≡ n) (r : idToEdge q ≡ e)
-           → edℕ1 e ≡ (q , r)
     zero : ℕ
     succ : ℕ → ℕ
     recℕ : ℕ → Recℕ
@@ -576,18 +540,12 @@ postulate
     {-# REWRITE succβ #-}
     ℕη : (n : ℕ) → recℕ n ℕ succ zero ≡ n
     {-# REWRITE ℕη #-}
+```
+Note that among the identities postulated as rewrite rules for $\mathbb{N}$ is its $\eta$-law, i.e. $\mathsf{rec\mathbb{N}} ~ n ~ \mathbb{N} ~ \mathsf{succ} ~ \mathsf{zero} = n$ for all $n : \mathbb{N}$, as this will be important for deriving the induction principle for $\mathbb{N}$.
 
-edℕ : isEdgeDiscrete ℕ
-edℕ e = (edℕ1 e , λ (q , r) → edℕ2 e q r)
+From here, we may proceed essentially as in the proof of parametricity for `PolyId`, by proving an analogous *substitution lemma* for `Recℕ`, following essentially the same steps:
 
-rwEDℕ1 : (n : ℕ) → edℕ1 (eabs (λ _ → n)) ≡ (refl , refl)
-rwEDℕ1 n = edℕ2 (eabs (λ _ → n)) refl refl
-{-# REWRITE rwEDℕ1 #-}
-
-postulate
-    rwEDℕ2 : (n : ℕ) → edℕ2 (eabs (λ _ → n)) refl refl ≡ refl
-    {-# REWRITE rwEDℕ2 #-}
-
+```agda
 module paramℕ {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (B : A → Set ℓ) 
                   (f : A → A) (ff : (x : A) → B x → B (f x))
                   (a : A) (b : B a) (α : Recℕ) where
@@ -612,7 +570,33 @@ module paramℕ {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (B : A → Set ℓ)
     substLemma : B (α A f a)
     substLemma = 
         transp⁻¹ B (mkInv idToEdge edA lemma2) lemma1
+```
 
+In order to apply this lemma to $\mathbb{N}$ itself, we must further postulate that $\mathbb{N}$ is edge-discrete (in fact, one could show by induction that $ℕ$ is *discrete*, hence edge-discrete by the assumption of connectedness for $I$; however, since we have not yet proven induction for $\mathbb{N}$, we must instead take this result as an additional axiom, from which induction on $\mathbb{N}$ will follow). 
+
+```agda
+postulate
+    edℕ1 : ∀ {m n : ℕ} (e : Edge (λ _ → ℕ) m n) 
+           → Σ (m ≡ n) (λ p → idToEdge p ≡ e)
+    edℕ2 : ∀ {m n : ℕ} (e : Edge (λ _ → ℕ) m n)
+           → (q : m ≡ n) (r : idToEdge q ≡ e)
+           → edℕ1 e ≡ (q , r)
+
+edℕ : isEdgeDiscrete ℕ
+edℕ e = (edℕ1 e , λ (q , r) → edℕ2 e q r)
+
+rwEDℕ1 : (n : ℕ) → edℕ1 (eabs (λ _ → n)) ≡ (refl , refl)
+rwEDℕ1 n = edℕ2 (eabs (λ _ → n)) refl refl
+{-# REWRITE rwEDℕ1 #-}
+
+postulate
+    rwEDℕ2 : (n : ℕ) → edℕ2 (eabs (λ _ → n)) refl refl ≡ refl
+    {-# REWRITE rwEDℕ2 #-}
+```
+
+Induction for $\mathbb{N}$ then follows as a straightforward consequence of the substitution lemma:
+
+```agda
 indℕ : (P : ℕ → Set)
        → ((n : ℕ) → P n → P (succ n))
        → P zero → (n : ℕ) → P n
@@ -620,34 +604,37 @@ indℕ P ps pz n =
     paramℕ.substLemma ℕ edℕ P succ ps zero pz (recℕ n)
 ```
 
+Note that our use of the $\eta$-law for $\mathbb{N}$ as a rewrite rule is critical to the above proof, since otherwise in the last step, we would obtain not a proof of `P n`, but rather `P (recℕ n ℕ succ zero)`.
+
+As in the case of the parametricity theorem for `PolyId` we may test that the derived induction principle for $\mathbb{N}$ evaluates canonical forms to canonical forms, as in the following example, based on the usual inductive proof that `zero` is an identity element for addition on the right:
+
 ```agda
-ap : ∀ {ℓ κ} {A : Set ℓ} {B : Set κ} {a b : A}
-     → (f : A → B) → a ≡ b → f a ≡ f b
-ap f refl = refl
+module ℕexample where
+    _plus_ : ℕ → ℕ → ℕ
+    m plus n = recℕ m ℕ succ n
 
-apd : ∀ {ℓ κ μ} {A : Set ℓ} {B : A → Set κ} {C : Set μ}
-      → {a b : A} {aB : B a} {bB : B b}
-      → (f : (a : A) → B a → C) → (p : a ≡ b)
-      → aB ≡ transp⁻¹ B p bB → f a aB ≡ f b bB
-apd f refl refl = refl
+    zeroIdR : (n : ℕ) → n plus zero ≡ n
+    zeroIdR n = indℕ (λ m → m plus zero ≡ m)
+                     (λ m p → ap succ p) refl n
+    
+    shouldBeRefl3 : succ (succ zero) ≡ succ (succ zero)
+    shouldBeRefl3 = zeroIdR (succ (succ zero))
+```
 
-g1apd : ∀ {ℓ} {A : Set ℓ} {B : A → Set ℓ}
-        → {a b : A} {aB : B a} {bB : B b}
-        → (p : a ≡ b) → (q : aB ≡ transp⁻¹ B p bB)
-        → apd (λ x y → g1pair {B = B} i0 x (λ _ → y)) p q ≡ p
-g1apd refl refl = refl
-{-# REWRITE g1apd #-}
+Running Agda's normalization procedure on `shouldBeRefl3` again confirms that it evaluates to `refl`.
 
+Moving on, then, from inductive types to *higher* inductive types, I now consider deriving the induction principle for the *circle* $S^1$, defined to be the type freely generated by a single basepoint $\mathsf{base} : S^1$, with a nontrivial identification $\mathsf{loop} : \mathsf{base} = \mathsf{base}$. The recursor for $S^1$ thus has the following type:
+
+```agda
 RecS¹ : Setω
 RecS¹ = ∀ {ℓ} (A : Set ℓ) → (a : A) → a ≡ a → A
+```
 
+Then, just as before, we may postulate the corresponding constructors and $\beta\eta$-laws for $S^1$:
+
+```agda
 postulate
     S¹ : Set₀
-    edS¹1 : ∀ {s t : S¹} (e : Edge (λ _ → S¹) s t)
-            → Σ (s ≡ t) (λ p → idToEdge p ≡ e)
-    edS¹2 : ∀ {s t : S¹} (e : Edge (λ _ → S¹) s t)
-            → (q : s ≡ t) (r : idToEdge q ≡ e)
-            → edS¹1 e ≡ (q , r)
     base : S¹
     loop : base ≡ base
     recS¹ : S¹ → RecS¹
@@ -659,26 +646,19 @@ postulate
     {-# REWRITE loopβ #-}
     S¹η : (s : S¹) → recS¹ s S¹ base loop ≡ s
     {-# REWRITE S¹η #-}
+```
 
-edS¹ : isEdgeDiscrete S¹
-edS¹ e = (edS¹1 e , λ (q , r) → edS¹2 e q r)
+The proof of induction for $S^1$ is then in essentials the same as the one given above for $\mathbb{N}$. We begin by proving a *substitution lemma* for `RecS¹`, following exactly the same steps as in the proof of the corresponding theorem for `Recℕ`:
 
-rwEDS¹1 : (s : S¹) → edS¹1 (eabs (λ _ → s)) ≡ (refl , refl)
-rwEDS¹1 s = edS¹2 (eabs (λ _ → s)) refl refl
-{-# REWRITE rwEDS¹1 #-}
-
-postulate
-    rwEDS¹2 : (s : S¹) → edS¹2 (eabs (λ _ → s)) refl refl ≡ refl
-    {-# REWRITE rwEDS¹2 #-}
-
+```agda
 module paramS¹ {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (B : A → Set ℓ) 
-               (a : A) (b : B a) (l : a ≡ a)
-               (lB : b ≡ transp⁻¹ B l b) (α : RecS¹) where
+                   (a : A) (b : B a) (l : a ≡ a)
+                   (lB : b ≡ transp⁻¹ B l b) (α : RecS¹) where
 
     lemma0 : (i : I) → Gph1 i A B
     lemma0 i = α (Gph1 i A B)
                  (g1pair i a (λ _ → b))
-                 (apd (λ a b → g1pair i a (λ _ → b)) l lB)
+                 (apg1pair l lB i)
 
     lemma1 : B (g1fst i1 (lemma0 i1))
     lemma1 = g1snd (lemma0 i1)
@@ -690,75 +670,47 @@ module paramS¹ {ℓ} (A : Set ℓ) (edA : isEdgeDiscrete A) (B : A → Set ℓ)
     substLemma : B (α A a l)
     substLemma = 
         transp⁻¹ B (mkInv idToEdge edA lemma2) lemma1
+```
 
+We then postulate that $S^1$ is edge-discrete, as before, in order to apply this lemma to $S^1$ itself:
+
+```agda
+postulate
+    edS¹1 : ∀ {s t : S¹} (e : Edge (λ _ → S¹) s t)
+            → Σ (s ≡ t) (λ p → idToEdge p ≡ e)
+    edS¹2 : ∀ {s t : S¹} (e : Edge (λ _ → S¹) s t)
+            → (q : s ≡ t) (r : idToEdge q ≡ e)
+            → edS¹1 e ≡ (q , r)
+
+edS¹ : isEdgeDiscrete S¹
+edS¹ e = (edS¹1 e , λ (q , r) → edS¹2 e q r)
+
+rwEDS¹1 : (s : S¹) → edS¹1 (eabs (λ _ → s)) ≡ (refl , refl)
+rwEDS¹1 s = edS¹2 (eabs (λ _ → s)) refl refl
+{-# REWRITE rwEDS¹1 #-}
+
+postulate
+    rwEDS¹2 : (s : S¹) → edS¹2 (eabs (λ _ → s)) refl refl ≡ refl
+    {-# REWRITE rwEDS¹2 #-}
+```
+
+And then the desired induction principle for $S^1$ follows straightforwardly:
+
+```agda
 indS¹ : (P : S¹ → Set)
         → (pb : P base) → pb ≡ transp⁻¹ P loop pb
         → (s : S¹) → P s
 indS¹ P pb pl s = 
     paramS¹.substLemma S¹ edS¹ P base pb loop pl (recS¹ s)
 ```
-### Modularity & Coinductive Types
 
-```agda
-∃ : ∀ {ℓ κ} (A : Set ℓ) (B : A → Set κ) → Setω
-∃ A B = ∀ {ℓ} (C : Set ℓ) → ((a : A) → B a → C) → C
-
-∃pair : ∀ {ℓ κ} {A : Set ℓ} {B : A → Set κ}
-        → (a : A) → B a → ∃ A B
-∃pair a b = λ C → λ c → c a b
-
-modularity : ∀ {ℓ κ μ} (X Y : Set ℓ) (F : Set ℓ → Set κ)
-             → (fx : F X) (fy : F Y) (R : X → Y → Set ℓ)
-             → (Edge (λ i → F (Gph2 i i X Y R)) fx fy)
-             → (C : Set μ) → isEdgeDiscrete C
-             → (c : (Z : Set ℓ) → F Z → C)
-             → ∃pair X fx C c ≡ ∃pair Y fy C c
-modularity X Y F fx fy R e C edC c = 
-    mkInv idToEdge edC 
-          (eabs (λ i → ∃pair (Gph2 i i X Y R) (eapp e i) C c))
-
-postulate
-    2ᴺ : Set₀
-    ed2ᴺ1 : ∀ {m n : 2ᴺ} (e : Edge (λ _ → 2ᴺ) m n) 
-            → Σ (m ≡ n) (λ p → idToEdge p ≡ e)
-    ed2ᴺ2 : ∀ {m n : 2ᴺ} (e : Edge (λ _ → 2ᴺ) m n)
-            → (q : m ≡ n) (r : idToEdge q ≡ e)
-            → ed2ᴺ1 e ≡ (q , r)
-    head : 2ᴺ → Bool
-    tail : 2ᴺ → 2ᴺ
-    corec2ᴺ : (X : Set₀) → (X → Bool) → (X → X) → X → 2ᴺ
-    headβ : (X : Set₀) (hd : X → Bool) (tl : X → X) (x : X) 
-            → head (corec2ᴺ X hd tl x) ≡ hd x
-    {-# REWRITE headβ #-}
-    tailβ : (X : Set₀) (hd : X → Bool) (tl : X → X) (x : X) 
-            → tail (corec2ᴺ X hd tl x) ≡ corec2ᴺ X hd tl (tl x)
-    {-# REWRITE tailβ #-}
-    2ᴺη : (n : 2ᴺ) → corec2ᴺ 2ᴺ head tail n ≡ n
-    {-# REWRITE 2ᴺη #-}
-
-ed2ᴺ : isEdgeDiscrete 2ᴺ
-ed2ᴺ e = (ed2ᴺ1 e , λ (q , r) → ed2ᴺ2 e q r)
-
-rwED2ᴺ1 : (n : 2ᴺ) → ed2ᴺ1 (eabs (λ _ → n)) ≡ (refl , refl)
-rwED2ᴺ1 n = ed2ᴺ2 (eabs (λ _ → n)) refl refl
-{-# REWRITE rwED2ᴺ1 #-}
-
-postulate
-    rwED2ᴺ2 : (n : 2ᴺ) → ed2ᴺ2 (eabs (λ _ → n)) refl refl ≡ refl
-    {-# REWRITE rwED2ᴺ2 #-}
-
-seq2ᴺ : 2ᴺ → (ℕ → Bool)
-seq2ᴺ s n = fst (recℕ n (Σ Bool (λ _ → 2ᴺ)) 
-                      (λ (b , s') → (head s' , tail s')) 
-                      (head s , s))
-
-_∼_ : 2ᴺ → 2ᴺ → Set₀
-s ∼ t = (n : ℕ) → seq2ᴺ s n ≡ seq2ᴺ t n
-
-∼edge : (s t : 2ᴺ) → s ∼ t → (i j : I) → 
-```
+Although it is not in general possible to verify that this same construction is capable of deriving induction principles for *all* higher inductive types -- essentially because there is as yet no well-established definition of what higher inductive types are *in general* -- there appears to be no difficulty in extending this method of proof to all known classes of higher inductive types. Moreover, that the proof of induction for $S^1$ is essentially no more complex than that for $\mathbb{N}$ suggests that this method is capable of taming the complexity of coherences for such higher inductive types, and in this sense provides a solution to this instance of the coherence problem.
 
 # Toward a synthetic theory of parametricity
+
+### Cohesion & Gluing
+
+### Cohesion & Coherence
 
 Parametricity is *the* tool for the job of tackling coherence problems.
 
